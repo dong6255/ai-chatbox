@@ -39,17 +39,26 @@ const createHeaders = () => {
 }
 
 export const chatApi = {
-    async sendMessage(messages, stream = false) {
+    async sendMessage(messages, stream = false, modelConfig = null) {
         const settingsStore = useSettingsStore()
         
-        const payload = {
+        // 如果没有提供模型配置，使用全局设置
+        const modelSettings = modelConfig || {
             model: settingsStore.model,
-            messages,
             temperature: settingsStore.temperature,
-            max_tokens: settingsStore.maxTokens,
+            maxTokens: settingsStore.maxTokens,
+            topP: settingsStore.topP,
+            topK: settingsStore.topK
+        }
+        
+        const payload = {
+            model: modelSettings.model,
+            messages,
+            temperature: modelSettings.temperature,
+            max_tokens: modelSettings.maxTokens,
             stream,
-            top_p: 0.7,
-            top_k: 50,
+            top_p: modelSettings.topP,
+            top_k: modelSettings.topK,
             frequency_penalty: 0.5,
             n: 1,
             response_format: {
@@ -87,14 +96,23 @@ export const chatApi = {
         return await response.json()
     },
 
-    async sendAsyncMessage(messages) {
+    async sendAsyncMessage(messages, modelConfig = null) {
         const settingsStore = useSettingsStore()
         
-        const payload = {
+        // 如果没有提供模型配置，使用全局设置
+        const modelSettings = modelConfig || {
             model: settingsStore.model,
-            messages,
             temperature: settingsStore.temperature,
-            max_tokens: settingsStore.maxTokens
+            maxTokens: settingsStore.maxTokens,
+            topP: settingsStore.topP,
+            topK: settingsStore.topK
+        }
+        
+        const payload = {
+            model: modelSettings.model,
+            messages,
+            temperature: modelSettings.temperature,
+            max_tokens: modelSettings.maxTokens
         }
 
         const config = getCurrentModelConfig()

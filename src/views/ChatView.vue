@@ -28,7 +28,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, nextTick } from 'vue'
+import { ref, computed, watch, nextTick, onMounted } from 'vue'
 import { useChatStore } from '../stores/chat'
 import { chatApi } from '../utils/api'
 import { messageHandler } from '../utils/messageHandler'
@@ -42,6 +42,11 @@ const chatStore = useChatStore()
 const messages = computed(() => chatStore.messages)
 const isLoading = computed(() => chatStore.isLoading)
 const messagesContainer = ref(null)
+
+// 初始化时确保有默认对话
+onMounted(() => {
+  chatStore.initializeDefaultConversation()
+})
 
 watch(
   messages,
@@ -61,12 +66,31 @@ const handleSend = async (content) => {
   chatStore.isLoading = true
   try {
     const settingsStore = useSettingsStore()
+    
+    // 构建发送给API的消息列表
+    let apiMessages = messages.value.slice(0, -1).map(m => ({
+      role: m.role,
+      content: m.content
+    }))
+    
+    // 如果当前对话有系统提示词，添加到消息列表开头
+    const currentConversation = chatStore.currentConversation
+    if (currentConversation && currentConversation.systemPrompt && currentConversation.systemPrompt.trim()) {
+      apiMessages.unshift({
+        role: 'system',
+        content: currentConversation.systemPrompt
+      })
+    }
+    
+    // 获取当前对话的模型配置
+    const modelConfig = currentConversation && currentConversation.modelConfig 
+      ? currentConversation.modelConfig 
+      : null
+    
     const response = await chatApi.sendMessage(
-      messages.value.slice(0, -1).map(m => ({
-        role: m.role,
-        content: m.content
-      })),
-      settingsStore.streamResponse
+      apiMessages,
+      settingsStore.streamResponse,
+      modelConfig
     )
     if (settingsStore.streamResponse) {
       await messageHandler.processStreamResponse(response, {
@@ -93,32 +117,51 @@ const handleClear = () => {
 }
 
 const handleMessageUpdate = async updatedMessage => {
-  const index = chatStore.messages.findIndex(m => m.id === updatedMessage.id)
+  if (!chatStore.activeConversationId) return
+  
+  const conversation = chatStore.conversations[chatStore.activeConversationId]
+  if (!conversation) return
+  
+  const index = conversation.messages.findIndex(m => m.id === updatedMessage.id)
   if (index !== -1) {
-    chatStore.messages.splice(index, 2)
+    conversation.messages.splice(index, 2)
+    conversation.updatedAt = new Date().toISOString()
     await handleSend(updatedMessage.content)
   }
 }
 
 const handleMessageDelete = message => {
-  const index = chatStore.messages.findIndex(m => m.id === message.id)
+  if (!chatStore.activeConversationId) return
+  
+  const conversation = chatStore.conversations[chatStore.activeConversationId]
+  if (!conversation) return
+  
+  const index = conversation.messages.findIndex(m => m.id === message.id)
   if (index !== -1) {
-    chatStore.messages.splice(index, 2)
+    conversation.messages.splice(index, 2)
+    conversation.updatedAt = new Date().toISOString()
   }
 }
 
 const handleRegenerate = async message => {
-  const index = chatStore.messages.findIndex(m => m.id === message.id && m.role === 'assistant')
+  if (!chatStore.activeConversationId) return
+  
+  const conversation = chatStore.conversations[chatStore.activeConversationId]
+  if (!conversation) return
+  
+  const index = conversation.messages.findIndex(m => m.id === message.id && m.role === 'assistant')
   if (index !== -1 && index > 0) {
-    const userMessage = chatStore.messages[index - 1]
-    chatStore.messages.splice(index - 1, 2)
+    const userMessage = conversation.messages[index - 1]
+    conversation.messages.splice(index - 1, 2)
+    conversation.updatedAt = new Date().toISOString()
+    
     if (isLoading.value) return
     chatStore.isLoading = true
     try {
       await handleSend(userMessage.content)
     } catch (error) {
       console.error('重新生成失败:', error)
-      chatStore.messages.splice(index, 0, message)
+      conversation.messages.splice(index, 0, message)
     } finally {
       chatStore.isLoading = false
     }
@@ -136,7 +179,7 @@ const handleRegenerate = async message => {
   border-right: 1px solid var(--border-color);
 }
 .settings-panel {
-  width: 300px;
+  width: 60%;
   border-right: 1px solid var(--border-color);
 }
 .chat-container {

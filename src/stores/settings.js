@@ -14,19 +14,21 @@ export const useSettingsStore = defineStore('settings', {
         // 使用的模型名称，默认为 'THUDM/glm-4-9b-chat'
         model: 'THUDM/glm-4-9b-chat',
         // API 密钥，默认为空字符串
-        apiKey: '',
+        apiKey: 'sk-lojoercayeaxqmkvqrhxazqowssttoxsueqpamtkuudexjbl',
         // 是否启用流式响应，默认为 true
         streamResponse: true,
         // Top P 参数
         topP: 0.7,
         // Top K 参数
         topK: 50,
+        // 系统提示词，默认为空字符串
+        systemPrompt: '',
         // 自定义模型配置
         customModels: [
             {
                 name: 'Qwen/Qwen3-Coder-30B-A3B-Instruct',
                 label: 'Qwen3-Coder-30B',
-                apiKey: 'sk-',
+                apiKey: 'sk-lojoercayeaxqmkvqrhxazqowssttoxsueqpamtkuudexjbl',
                 baseUrl: 'https://api.siliconflow.cn/v1'
             }
         ],

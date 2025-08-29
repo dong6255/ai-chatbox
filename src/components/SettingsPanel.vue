@@ -100,7 +100,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed } from 'vue'
+import { ref, reactive, computed, watch } from 'vue'
 import { useSettingsStore, modelOptions } from '../stores/settings'
 import { ElMessage } from 'element-plus'
 
@@ -121,16 +121,28 @@ const visible = computed({
   set: (value) => emit('update:modelValue', value)
 })
 
+// 获取当前模型的API密钥
+const getCurrentApiKey = () => {
+  const customModel = settingsStore.customModels.find(model => model.name === settingsStore.model)
+  return customModel ? customModel.apiKey : settingsStore.apiKey
+}
+
 // 设置对象，使用reactive进行响应式处理
 const settings = reactive({
   isDarkMode: settingsStore.isDarkMode,
   model: settingsStore.model,
   temperature: settingsStore.temperature,
   maxTokens: settingsStore.maxTokens,
-  apiKey: settingsStore.apiKey,
+  apiKey: getCurrentApiKey(),
   streamResponse: settingsStore.streamResponse,
   topP: settingsStore.topP,
   topK: settingsStore.topK
+})
+
+// 监听模型变化，自动更新API密钥显示
+watch(() => settings.model, (newModel) => {
+  const customModel = settingsStore.customModels.find(model => model.name === newModel)
+  settings.apiKey = customModel ? customModel.apiKey : settingsStore.apiKey
 })
 
 // 处理深色模式切换
@@ -140,7 +152,28 @@ const handleDarkModeChange = (value) => {
 
 // 保存设置
 const handleSave = () => {
-  settingsStore.updateSettings(settings)
+  // 检查当前模型是否为自定义模型
+  const customModelIndex = settingsStore.customModels.findIndex(model => model.name === settings.model)
+  
+  if (customModelIndex !== -1) {
+    // 如果是自定义模型，更新customModels中的apiKey
+    settingsStore.customModels[customModelIndex].apiKey = settings.apiKey
+  } else {
+    // 如果是默认模型，更新settingsStore的apiKey
+    settingsStore.apiKey = settings.apiKey
+  }
+  
+  // 更新其他设置
+  settingsStore.updateSettings({
+    isDarkMode: settings.isDarkMode,
+    model: settings.model,
+    temperature: settings.temperature,
+    maxTokens: settings.maxTokens,
+    streamResponse: settings.streamResponse,
+    topP: settings.topP,
+    topK: settings.topK
+  })
+  
   ElMessage.success('设置已保存')
   visible.value = false
 }
