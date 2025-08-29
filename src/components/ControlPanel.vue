@@ -177,21 +177,30 @@ const getCurrentSystemPrompt = () => {
 // 获取当前对话的模型配置
 const getCurrentModelConfig = () => {
   const currentConversation = chatStore.currentConversation
-  if (currentConversation && currentConversation.modelConfig) {
-    return currentConversation.modelConfig
-  }
-  // 如果没有模型配置，使用全局设置作为默认值
-  return {
+  const defaultConfig = {
     model: settingsStore.model,
     temperature: settingsStore.temperature,
     maxTokens: settingsStore.maxTokens,
     topP: settingsStore.topP,
     topK: settingsStore.topK
   }
+
+  if (currentConversation && currentConversation.modelConfig) {
+    const cfg = currentConversation.modelConfig
+    return {
+      model: cfg.model ?? defaultConfig.model,
+      temperature: cfg.temperature ?? defaultConfig.temperature,
+      maxTokens: cfg.maxTokens ?? defaultConfig.maxTokens,
+      topP: cfg.topP ?? defaultConfig.topP,
+      topK: cfg.topK ?? defaultConfig.topK
+    }
+  }
+
+  return { ...defaultConfig }
 }
 
 const prompt = ref(getCurrentSystemPrompt())
-const settings = reactive(getCurrentModelConfig())
+const settings = reactive({ ...getCurrentModelConfig() })
 
 // 监听当前对话变化，自动更新提示词和模型配置显示
 watch(
