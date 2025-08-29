@@ -8,9 +8,25 @@
         :rows="25"
         placeholder="请输入提示词"
       />
-      <el-button class="save-btn" type="primary" size="small" @click="savePrompt">
-        保存提示词
-      </el-button>
+      <div class="button-group">
+        <el-button class="save-btn" type="primary" size="small" @click="savePrompt">
+          保存提示词
+        </el-button>
+        <el-button class="export-btn" type="success" size="small" @click="exportConfig">
+          导出配置
+        </el-button>
+        <el-upload
+          ref="uploadRef"
+          :show-file-list="false"
+          :before-upload="importConfig"
+          accept=".json"
+          :auto-upload="false"
+        >
+          <el-button class="import-btn" type="warning" size="small">
+            导入配置
+          </el-button>
+        </el-upload>
+      </div>
     </div>
     <el-divider />
     <div class="model-section">
@@ -57,10 +73,97 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, watch } from 'vue'
+import { ref, reactive, computed, watch, nextTick } from 'vue'
 import { useSettingsStore, modelOptions } from '../stores/settings'
 import { useChatStore } from '../stores/chat'
 import { ElMessage } from 'element-plus'
+
+/**
+ * 导出配置
+ */
+const exportConfig = () => {
+  if (!chatStore.activeConversationId) {
+    ElMessage.warning('请先创建或选择一个对话')
+    return
+  }
+  
+  const config = {
+    systemPrompt: prompt.value,
+    modelConfig: {
+      model: settings.model,
+      temperature: settings.temperature,
+      maxTokens: settings.maxTokens,
+      topP: settings.topP,
+      topK: settings.topK
+    },
+    exportTime: new Date().toISOString()
+  }
+  
+  const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `chat-config-${Date.now()}.json`
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
+  
+  ElMessage.success('配置已导出')
+}
+
+/**
+ * 导入配置
+ */
+const uploadRef = ref()
+const importConfig = (file) => {
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    try {
+      const config = JSON.parse(e.target.result)
+      
+      // 验证配置格式
+      if (!config.systemPrompt && !config.modelConfig) {
+        ElMessage.error('配置文件格式不正确')
+        return
+      }
+      
+      if (!chatStore.activeConversationId) {
+        ElMessage.warning('请先创建或选择一个对话')
+        return
+      }
+      
+      // 导入系统提示词
+      if (config.systemPrompt) {
+        prompt.value = config.systemPrompt
+        // 保存到当前对话
+        chatStore.updateConversationSystemPrompt(chatStore.activeConversationId, config.systemPrompt)
+      }
+      
+      // 导入模型配置
+      if (config.modelConfig) {
+        Object.assign(settings, config.modelConfig)
+        // 保存到当前对话
+        chatStore.updateConversationModelConfig(chatStore.activeConversationId, config.modelConfig)
+      }
+      
+      // 强制触发界面更新
+      nextTick(() => {
+        // 重新获取当前对话的配置以确保界面同步
+        const newSystemPrompt = getCurrentSystemPrompt()
+        const newModelConfig = getCurrentModelConfig()
+        prompt.value = newSystemPrompt
+        Object.assign(settings, newModelConfig)
+      })
+      
+      ElMessage.success('配置已导入并应用到当前对话')
+    } catch (error) {
+      ElMessage.error('配置文件解析失败')
+    }
+  }
+  reader.readAsText(file)
+  return false // 阻止自动上传
+}
 
 const settingsStore = useSettingsStore()
 const chatStore = useChatStore()
@@ -150,8 +253,17 @@ const saveSettings = () => {
 .kb-section {
   margin-bottom: 1rem;
 }
-.save-btn {
+.button-group {
+  display: flex;
+  gap: 0.5rem;
   margin-top: 0.5rem;
+  flex-wrap: wrap;
+}
+.save-btn,
+.export-btn,
+.import-btn {
+  flex: 1;
+  min-width: 80px;
 }
 .w-full {
   width: 100%;
