@@ -49,7 +49,13 @@ export const chatApi = {
             temperature: (modelConfig && modelConfig.temperature !== null) ? modelConfig.temperature : settingsStore.temperature,
             maxTokens: (modelConfig && modelConfig.maxTokens !== null) ? modelConfig.maxTokens : settingsStore.maxTokens,
             topP: (modelConfig && modelConfig.topP !== null) ? modelConfig.topP : settingsStore.topP,
-            topK: (modelConfig && modelConfig.topK !== null) ? modelConfig.topK : settingsStore.topK
+            topK: (modelConfig && modelConfig.topK !== null) ? modelConfig.topK : settingsStore.topK,
+            repetitionPenalty: (modelConfig && modelConfig.repetitionPenalty !== null) ? modelConfig.repetitionPenalty : settingsStore.repetitionPenalty,
+            frequencyPenalty: (modelConfig && modelConfig.frequencyPenalty !== null) ? modelConfig.frequencyPenalty : settingsStore.frequencyPenalty,
+            presencePenalty: (modelConfig && modelConfig.presencePenalty !== null) ? modelConfig.presencePenalty : settingsStore.presencePenalty,
+            stopSequences: (modelConfig && modelConfig.stopSequences !== null) ? modelConfig.stopSequences : settingsStore.stopSequences,
+            seed: (modelConfig && modelConfig.seed !== null) ? modelConfig.seed : settingsStore.seed,
+            minP: (modelConfig && modelConfig.minP !== null) ? modelConfig.minP : settingsStore.minP
         }
         
         const payload = {
@@ -60,20 +66,23 @@ export const chatApi = {
             stream,
             top_p: modelSettings.topP,
             top_k: modelSettings.topK,
-            frequency_penalty: 0.5,
+            repetition_penalty: modelSettings.repetitionPenalty,
+            frequency_penalty: modelSettings.frequencyPenalty,
+            presence_penalty: modelSettings.presencePenalty,
+            min_p: modelSettings.minP,
             n: 1,
             response_format: {
                 type: "text"
-            },
-            // tools: [{
-            //     type: "function",
-            //     function: {
-            //         description: "<string>",
-            //         name: "<string>",
-            //         parameters: {},
-            //         strict: true
-            //     }
-            // }]
+            }
+        }
+        
+        // 添加可选参数
+        if (modelSettings.stopSequences && modelSettings.stopSequences.length > 0) {
+            payload.stop = modelSettings.stopSequences
+        }
+        
+        if (modelSettings.seed !== null && modelSettings.seed !== undefined) {
+            payload.seed = modelSettings.seed
         }
 
         const config = getCurrentModelConfig()
@@ -107,14 +116,35 @@ export const chatApi = {
             temperature: (modelConfig && modelConfig.temperature !== null) ? modelConfig.temperature : settingsStore.temperature,
             maxTokens: (modelConfig && modelConfig.maxTokens !== null) ? modelConfig.maxTokens : settingsStore.maxTokens,
             topP: (modelConfig && modelConfig.topP !== null) ? modelConfig.topP : settingsStore.topP,
-            topK: (modelConfig && modelConfig.topK !== null) ? modelConfig.topK : settingsStore.topK
+            topK: (modelConfig && modelConfig.topK !== null) ? modelConfig.topK : settingsStore.topK,
+            repetitionPenalty: (modelConfig && modelConfig.repetitionPenalty !== null) ? modelConfig.repetitionPenalty : settingsStore.repetitionPenalty,
+            frequencyPenalty: (modelConfig && modelConfig.frequencyPenalty !== null) ? modelConfig.frequencyPenalty : settingsStore.frequencyPenalty,
+            presencePenalty: (modelConfig && modelConfig.presencePenalty !== null) ? modelConfig.presencePenalty : settingsStore.presencePenalty,
+            stopSequences: (modelConfig && modelConfig.stopSequences !== null) ? modelConfig.stopSequences : settingsStore.stopSequences,
+            seed: (modelConfig && modelConfig.seed !== null) ? modelConfig.seed : settingsStore.seed,
+            minP: (modelConfig && modelConfig.minP !== null) ? modelConfig.minP : settingsStore.minP
         }
         
         const payload = {
             model: modelSettings.model,
             messages,
             temperature: modelSettings.temperature,
-            max_tokens: modelSettings.maxTokens
+            max_tokens: modelSettings.maxTokens,
+            top_p: modelSettings.topP,
+            top_k: modelSettings.topK,
+            repetition_penalty: modelSettings.repetitionPenalty,
+            frequency_penalty: modelSettings.frequencyPenalty,
+            presence_penalty: modelSettings.presencePenalty,
+            min_p: modelSettings.minP
+        }
+        
+        // 添加可选参数
+        if (modelSettings.stopSequences && modelSettings.stopSequences.length > 0) {
+            payload.stop = modelSettings.stopSequences
+        }
+        
+        if (modelSettings.seed !== null && modelSettings.seed !== undefined) {
+            payload.seed = modelSettings.seed
         }
 
         const config = getCurrentModelConfig()

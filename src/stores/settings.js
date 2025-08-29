@@ -12,15 +12,27 @@ export const useSettingsStore = defineStore('settings', {
         // 最大 token 数量，默认值为 1000
         maxTokens: 1000,
         // 使用的模型名称，默认为 'THUDM/glm-4-9b-chat'
-        model: 'THUDM/glm-4-9b-chat',
+        model: 'Qwen/Qwen3-8B',
         // API 密钥，默认为空字符串
-        apiKey: 'sk-',
+        apiKey: 'sk-nzipogwhzfiwbqwzjlmqdhzioxj',
         // 是否启用流式响应，默认为 true
         streamResponse: true,
         // Top P 参数
         topP: 0.7,
         // Top K 参数
         topK: 50,
+        // 重复惩罚参数，控制重复内容的生成
+        repetitionPenalty: 1.1,
+        // 频率惩罚参数，降低高频词汇的使用
+        frequencyPenalty: 0.0,
+        // 存在惩罚参数，鼓励生成新的主题
+        presencePenalty: 0.0,
+        // 停止序列，遇到这些序列时停止生成
+        stopSequences: [],
+        // 种子值，用于生成可重现的结果
+        seed: null,
+        // 最小概率阈值
+        minP: 0.0,
         // 系统提示词，默认为空字符串
         systemPrompt: '',
         // 自定义模型配置
@@ -28,7 +40,7 @@ export const useSettingsStore = defineStore('settings', {
             {
                 name: 'Qwen/Qwen3-Coder-30B-A3B-Instruct',
                 label: 'Qwen3-Coder-30B',
-                apiKey: 'sk-',
+                apiKey: 'sk-nzipogwhzfiwbqwzjlmqdhzioxj',
                 baseUrl: 'https://api.siliconflow.cn/v1'
             }
         ],
