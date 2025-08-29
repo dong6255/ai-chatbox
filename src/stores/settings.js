@@ -14,7 +14,7 @@ export const useSettingsStore = defineStore('settings', {
         // 使用的模型名称，默认为 'THUDM/glm-4-9b-chat'
         model: 'THUDM/glm-4-9b-chat',
         // API 密钥，默认为空字符串
-        apiKey: 'sk-lojoercayeaxqmkvqrhxazqowssttoxsueqpamtkuudexjbl',
+        apiKey: 'sk-lojoercayeaxqmkvqrhxaz',
         // 是否启用流式响应，默认为 true
         streamResponse: true,
         // Top P 参数
