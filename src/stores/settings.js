@@ -14,7 +14,7 @@ export const useSettingsStore = defineStore('settings', {
         // 使用的模型名称，默认为 'THUDM/glm-4-9b-chat'
         model: 'THUDM/glm-4-9b-chat',
         // API 密钥，默认为空字符串
-        apiKey: 'sk-lojoercayeaxqmkvqrhxaz',
+        apiKey: 'sk-',
         // 是否启用流式响应，默认为 true
         streamResponse: true,
         // Top P 参数
@@ -28,7 +28,7 @@ export const useSettingsStore = defineStore('settings', {
             {
                 name: 'Qwen/Qwen3-Coder-30B-A3B-Instruct',
                 label: 'Qwen3-Coder-30B',
-                apiKey: 'sk-lojoercayeaxqmkvqrhxazqowssttoxsueqpamtkuudexjbl',
+                apiKey: 'sk-',
                 baseUrl: 'https://api.siliconflow.cn/v1'
             }
         ],
@@ -52,27 +52,22 @@ export const useSettingsStore = defineStore('settings', {
 
     // 配置持久化选项
     persist: {
-        // 启用持久化功能
-        enabled: true,
-        // 持久化策略数组
-        strategies: [
-            {
-                // 存储键名
-                key: 'ai-chat-settings',
-                // 存储方式，这里使用的是 localStorage
-                storage: localStorage,
-            },
-        ],
+        // 存储键名
+        key: 'ai-chat-settings',
+        // 存储方式，这里使用的是 localStorage
+        storage: localStorage,
     },
 })
 
 // 导出模型选项供其他组件使用
 export const modelOptions = [
-    { label: 'GLM-4-9B', value: 'THUDM/glm-4-9b-chat' },
-    { label: 'Qwen2.5-7B', value: 'Qwen/Qwen2.5-7B-Instruct' },
-    { label: 'Qwen2.5-Coder-7B', value: 'Qwen/Qwen2.5-Coder-7B-Instruct' },
+    // { label: 'GLM-4-9B', value: 'THUDM/glm-4-9b-chat' },
+    // { label: 'Qwen2.5-7B', value: 'Qwen/Qwen2.5-7B-Instruct' },
+    // { label: 'Qwen2.5-Coder-7B', value: 'Qwen/Qwen2.5-Coder-7B-Instruct' },
     { label: 'Qwen3-Coder-30B', value: 'Qwen/Qwen3-Coder-30B-A3B-Instruct' },
-    { label: 'Meta-Llama-3.1-8B', value: 'meta-llama/Meta-Llama-3.1-8B-Instruct' },
+    { label: 'Qwen3-8B', value: 'Qwen/Qwen3-8B' },
+    { label: 'DeepSeek-R1-0528-Qwen3-8B', value: 'deepseek-ai/DeepSeek-R1-0528-Qwen3-8B' },
+    // { label: 'Meta-Llama-3.1-8B', value: 'meta-llama/Meta-Llama-3.1-8B-Instruct' },
     // { label: 'Gemma-2-9B', value: 'google/gemma-2-9b-it' },  //不知道为什么用不了
-    { label: 'DeepSeek-V2.5', value: 'deepseek-ai/DeepSeek-V2.5' },
+    // { label: 'DeepSeek-V2.5', value: 'deepseek-ai/DeepSeek-V2.5' },
 ]

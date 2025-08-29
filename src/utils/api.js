@@ -43,12 +43,13 @@ export const chatApi = {
         const settingsStore = useSettingsStore()
         
         // 如果没有提供模型配置，使用全局设置
-        const modelSettings = modelConfig || {
-            model: settingsStore.model,
-            temperature: settingsStore.temperature,
-            maxTokens: settingsStore.maxTokens,
-            topP: settingsStore.topP,
-            topK: settingsStore.topK
+        // 如果提供了模型配置但某些值为null，则回退到全局设置
+        const modelSettings = {
+            model: (modelConfig && modelConfig.model) || settingsStore.model,
+            temperature: (modelConfig && modelConfig.temperature !== null) ? modelConfig.temperature : settingsStore.temperature,
+            maxTokens: (modelConfig && modelConfig.maxTokens !== null) ? modelConfig.maxTokens : settingsStore.maxTokens,
+            topP: (modelConfig && modelConfig.topP !== null) ? modelConfig.topP : settingsStore.topP,
+            topK: (modelConfig && modelConfig.topK !== null) ? modelConfig.topK : settingsStore.topK
         }
         
         const payload = {
@@ -64,15 +65,15 @@ export const chatApi = {
             response_format: {
                 type: "text"
             },
-            tools: [{
-                type: "function",
-                function: {
-                    description: "<string>",
-                    name: "<string>",
-                    parameters: {},
-                    strict: true
-                }
-            }]
+            // tools: [{
+            //     type: "function",
+            //     function: {
+            //         description: "<string>",
+            //         name: "<string>",
+            //         parameters: {},
+            //         strict: true
+            //     }
+            // }]
         }
 
         const config = getCurrentModelConfig()
@@ -100,12 +101,13 @@ export const chatApi = {
         const settingsStore = useSettingsStore()
         
         // 如果没有提供模型配置，使用全局设置
-        const modelSettings = modelConfig || {
-            model: settingsStore.model,
-            temperature: settingsStore.temperature,
-            maxTokens: settingsStore.maxTokens,
-            topP: settingsStore.topP,
-            topK: settingsStore.topK
+        // 如果提供了模型配置但某些值为null，则回退到全局设置
+        const modelSettings = {
+            model: (modelConfig && modelConfig.model) || settingsStore.model,
+            temperature: (modelConfig && modelConfig.temperature !== null) ? modelConfig.temperature : settingsStore.temperature,
+            maxTokens: (modelConfig && modelConfig.maxTokens !== null) ? modelConfig.maxTokens : settingsStore.maxTokens,
+            topP: (modelConfig && modelConfig.topP !== null) ? modelConfig.topP : settingsStore.topP,
+            topK: (modelConfig && modelConfig.topK !== null) ? modelConfig.topK : settingsStore.topK
         }
         
         const payload = {

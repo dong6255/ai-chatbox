@@ -1,12 +1,19 @@
 <template>
   <div class="chat-page">
     <conversation-list class="history-panel" />
-    <control-panel class="settings-panel" />
+    <control-panel ref="controlPanelRef" class="settings-panel" />
     <div class="chat-container">
       <div class="chat-header">
-        <h1>AI Chat</h1>
+        <h1>调试与运行</h1>
       </div>
-      <div class="messages-container" ref="messagesContainer">
+      <!-- 配置修改遮罩 -->
+      <div v-if="showConfigMask" class="config-mask">
+        <div class="mask-content">
+          <el-icon class="mask-icon"><Warning /></el-icon>
+          <p class="mask-text">修改配置后请点击保存</p>
+        </div>
+      </div>
+      <div class="messages-container" ref="messagesContainer" :class="{ 'masked': showConfigMask }">
         <template v-if="messages.length">
           <chat-message
             v-for="message in messages"
@@ -29,6 +36,7 @@
 
 <script setup>
 import { ref, computed, watch, nextTick, onMounted } from 'vue'
+import { Warning } from '@element-plus/icons-vue'
 import { useChatStore } from '../stores/chat'
 import { chatApi } from '../utils/api'
 import { messageHandler } from '../utils/messageHandler'
@@ -42,6 +50,14 @@ const chatStore = useChatStore()
 const messages = computed(() => chatStore.messages)
 const isLoading = computed(() => chatStore.isLoading)
 const messagesContainer = ref(null)
+const controlPanelRef = ref(null)
+
+// 计算是否需要显示遮罩
+const showConfigMask = computed(() => {
+  // 确保响应性，通过访问ref的value来触发重新计算
+  const controlPanel = controlPanelRef.value
+  return controlPanel ? controlPanel.isConfigModified : false
+})
 
 // 初始化时确保有默认对话
 onMounted(() => {
@@ -186,6 +202,7 @@ const handleRegenerate = async message => {
   flex: 1;
   display: flex;
   flex-direction: column;
+  position: relative;
 }
 .chat-header {
   display: flex;
@@ -198,6 +215,48 @@ const handleRegenerate = async message => {
   margin: 0;
   font-size: 1.5rem;
   color: var(--text-color-primary);
+}
+
+/* 配置修改遮罩样式 */
+.config-mask {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.mask-content {
+  background: var(--bg-color);
+  padding: 2rem;
+  border-radius: 12px;
+  text-align: center;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--border-color);
+}
+
+.mask-icon {
+  font-size: 3rem;
+  color: #f56c6c;
+  margin-bottom: 1rem;
+}
+
+.mask-text {
+  font-size: 1.2rem;
+  color: var(--text-color-primary);
+  margin: 0;
+  font-weight: 500;
+}
+
+.messages-container.masked {
+  filter: blur(4px);
+  pointer-events: none;
 }
 .messages-container {
   flex: 1;

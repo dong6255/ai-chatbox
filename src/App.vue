@@ -22,9 +22,11 @@ watch(() => settingsStore.isDarkMode, async (newValue) => {
   document.documentElement.setAttribute('data-theme', newValue ? 'dark' : 'light')
 }, { immediate: true })
 
-// 在组件挂载时初始化主题
+// 在组件挂载时初始化主题和强制触发settings store持久化
 onMounted(() => {
   document.documentElement.setAttribute('data-theme', settingsStore.isDarkMode ? 'dark' : 'light')
+  // 强制触发settings store的持久化，确保localStorage中有数据
+  settingsStore.updateSettings({})
 })
 </script>
 <style lang="scss">
