@@ -14,10 +14,8 @@
       <!-- 预览区域 -->
       <div class="preview-list" v-if="selectedFiles.length">
         <div v-for="(file, index) in selectedFiles" :key="index" class="preview-item">
-          <!-- 图片预览 -->
-          <img v-if="isImage(file)" :src="getPreviewUrl(file)" class="preview-image" />
           <!-- 文件名预览 -->
-          <div v-else class="file-preview">
+          <div class="file-preview">
             <el-icon>
               <Document />
             </el-icon>
@@ -49,6 +47,18 @@
             />
           </el-tooltip> -->
 
+          <!-- 文件上传切换按钮 -->
+          <el-tooltip content="添加文件" placement="top">
+            <el-button
+              circle
+              size="small"
+              type="info"
+              :icon="Upload"
+              @click="toggleUpload"
+              :class="{ 'active': showUpload }"
+            />
+          </el-tooltip>
+
           <el-button type="primary" size="small" @click="handleButtonClick" class="send-button">
             <template #icon>
               <el-icon>
@@ -73,7 +83,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { Delete, Position, Upload, Plus, Document, Close } from '@element-plus/icons-vue'
 import { useChatStore } from '@/stores/chat'
-import { ElMessageBox } from 'element-plus'
+import { ElMessageBox, ElMessage } from 'element-plus'
 
 // 定义组件的属性
 const props = defineProps({
@@ -108,6 +118,11 @@ const toggleUpload = () => {
 
 // 处理文件选择
 const handleFileChange = (file) => {
+  // 检查文件类型
+  if (!isAllowedFileType(file.raw)) {
+    ElMessage.error('只允许上传txt、doc、docx、xls、xlsx格式的文件')
+    return
+  }
   selectedFiles.value.push(file.raw)
 }
 
@@ -116,14 +131,22 @@ const removeFile = (index) => {
   selectedFiles.value.splice(index, 1)
 }
 
-// 判断是否为图片文件
-const isImage = (file) => {
-  return file.type.startsWith('image/')
-}
-
-// 获取预览URL
-const getPreviewUrl = (file) => {
-  return URL.createObjectURL(file)
+// 判断是否为允许的文件类型
+const isAllowedFileType = (file) => {
+  const allowedTypes = [
+    'text/plain', // txt
+    'application/msword', // doc
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // docx
+    'application/vnd.ms-excel', // xls
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' // xlsx
+  ]
+  
+  const allowedExtensions = ['.txt', '.doc', '.docx', '.xls', '.xlsx']
+  const fileName = file.name.toLowerCase()
+  
+  // 检查MIME类型或文件扩展名
+  return allowedTypes.includes(file.type) || 
+         allowedExtensions.some(ext => fileName.endsWith(ext))
 }
 
 /**
@@ -146,23 +169,32 @@ const handleSend = async () => {
 
   try {
     // 处理文件上传
-    const fileContents = await Promise.all(
+    const fileData = await Promise.all(
       selectedFiles.value.map(async (file) => {
-        if (isImage(file)) {
-          return await convertImageToBase64(file)
-        } else {
-          return await readFileContent(file)
+        const content = await readFileContent(file)
+        return {
+          name: file.name,
+          content: content,
+          type: file.type,
+          size: file.size
         }
       })
     )
 
-    // 组合消息内容
-    let content = messageText.value
-    if (fileContents.length > 0) {
-      content = content + '\n' + fileContents.join('\n')
+    // 构建用户显示的消息内容（只显示文件名和图标）
+    let displayContent = messageText.value
+    if (selectedFiles.value.length > 0) {
+      const fileList = selectedFiles.value.map(file => `📄 ${file.name}`).join('\n')
+      displayContent = displayContent ? `${displayContent}\n\n${fileList}` : fileList
     }
 
-    emit('send', content)
+    // 发送消息，包含显示内容和文件数据
+    emit('send', {
+      content: displayContent,
+      files: fileData,
+      originalText: messageText.value
+    })
+    
     messageText.value = ''
     selectedFiles.value = []
     showUpload.value = false
@@ -172,27 +204,63 @@ const handleSend = async () => {
   }
 }
 
-// 将图片转换为base64
-const convertImageToBase64 = (file) => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      resolve(`![${file.name}](${e.target.result})`)
-    }
-    reader.onerror = reject
-    reader.readAsDataURL(file)
-  })
-}
-
-// 读取文件内容
+/**
+ * 读取文件内容
+ * 根据文件类型选择不同的解析方式
+ * @param {File} file - 要读取的文件
+ * @returns {Promise<string>} 解析后的文件内容
+ */
 const readFileContent = (file) => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      resolve(`\`\`\`\n${e.target.result}\n\`\`\``)
+  return new Promise(async (resolve, reject) => {
+    try {
+      const fileName = file.name.toLowerCase()
+      
+      if (fileName.endsWith('.txt')) {
+        // 处理txt文件
+        const reader = new FileReader()
+        reader.onload = (e) => {
+          resolve(`\`\`\`\n${e.target.result}\n\`\`\``)
+        }
+        reader.onerror = reject
+        reader.readAsText(file)
+      } else if (fileName.endsWith('.docx')) {
+        // 处理docx文件
+        const mammoth = await import('mammoth')
+        const arrayBuffer = await file.arrayBuffer()
+        const result = await mammoth.extractRawText({ arrayBuffer })
+        resolve(`\`\`\`\n${result.value}\n\`\`\``)
+      } else if (fileName.endsWith('.doc')) {
+        // doc文件格式较复杂，暂时提示用户转换为docx
+        resolve('\`\`\`\n[DOC文件暂不支持直接解析，请转换为DOCX格式后重新上传]\n\`\`\`')
+      } else if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
+        // 处理Excel文件
+        const XLSX = await import('xlsx')
+        const arrayBuffer = await file.arrayBuffer()
+        const workbook = XLSX.read(arrayBuffer, { type: 'array' })
+        
+        let content = ''
+        workbook.SheetNames.forEach((sheetName, index) => {
+          if (index > 0) content += '\n\n'
+          content += `=== ${sheetName} ===\n`
+          const worksheet = workbook.Sheets[sheetName]
+          const csvData = XLSX.utils.sheet_to_csv(worksheet)
+          content += csvData
+        })
+        
+        resolve(`\`\`\`\n${content}\n\`\`\``)
+      } else {
+        // 其他文件类型，尝试作为文本读取
+        const reader = new FileReader()
+        reader.onload = (e) => {
+          resolve(`\`\`\`\n${e.target.result}\n\`\`\``)
+        }
+        reader.onerror = reject
+        reader.readAsText(file)
+      }
+    } catch (error) {
+      console.error('文件解析失败:', error)
+      reject(new Error(`文件解析失败: ${error.message}`))
     }
-    reader.onerror = reject
-    reader.readAsText(file)
   })
 }
 
@@ -319,6 +387,18 @@ const adjustHeight = () => {
     border-radius: 8px;
     min-width: auto;
     padding: 4px 8px;
+  }
+
+  // 文件上传按钮激活状态样式
+  .el-button.active {
+    background-color: #409eff;
+    border-color: #409eff;
+    color: white;
+  }
+
+  .el-button.active:hover {
+    background-color: #337ecc;
+    border-color: #337ecc;
   }
 }
 

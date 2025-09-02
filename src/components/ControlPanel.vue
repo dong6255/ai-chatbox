@@ -174,20 +174,24 @@ const exportConfig = () => {
     return;
   }
 
+  // 获取当前对话的实际系统提示词和模型配置
+  const currentSystemPrompt = getCurrentSystemPrompt();
+  const currentModelConfig = getCurrentModelConfig();
+  
   const config = {
-    systemPrompt: prompt.value,
+    systemPrompt: currentSystemPrompt,
     modelConfig: {
-      model: settings.model,
-      temperature: settings.temperature,
-      maxTokens: settings.maxTokens,
-      topP: settings.topP,
-      topK: settings.topK,
-      repetitionPenalty: settings.repetitionPenalty,
-      frequencyPenalty: settings.frequencyPenalty,
-      presencePenalty: settings.presencePenalty,
-      stopSequences: settings.stopSequences,
-      seed: settings.seed,
-      minP: settings.minP,
+      model: currentModelConfig.model,
+      temperature: currentModelConfig.temperature,
+      maxTokens: currentModelConfig.maxTokens,
+      topP: currentModelConfig.topP,
+      topK: currentModelConfig.topK,
+      repetitionPenalty: currentModelConfig.repetitionPenalty,
+      frequencyPenalty: currentModelConfig.frequencyPenalty,
+      presencePenalty: currentModelConfig.presencePenalty,
+      stopSequences: currentModelConfig.stopSequences,
+      seed: currentModelConfig.seed,
+      minP: currentModelConfig.minP,
     },
     exportTime: new Date().toISOString(),
   };
@@ -644,7 +648,9 @@ const optimizePrompt = () => {
   };
   
   // 打开新窗口
-  const newWindow = window.open("http://0.0.0.0:18181/", "_blank");
+  // const newWindow = window.open("http://30.0.45.13:18181/", "_blank");
+    const newWindow = window.open("http://29.2.16.115:18181/", "_blank");
+
   // 等待新窗口加载完成后发送数据
   if (newWindow) {
     const sendData = () => {

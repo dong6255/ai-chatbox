@@ -375,10 +375,30 @@ const modelSettings = reactive({
 // 停止序列文本
 const stopSequencesText = ref(modelSettings.stopSequences.join('\n'))
 
-// 监听模型设置变化，同步到store
+// 监听模型设置变化，同步到store和当前对话
 watch(modelSettings, (newSettings) => {
+  // 更新全局设置
   settingsStore.updateSettings(newSettings)
+  
+  // 同时更新当前对话的模型配置
+  if (chatStore.activeConversationId) {
+    chatStore.updateConversationModelConfig(
+      chatStore.activeConversationId,
+      newSettings
+    )
+  }
 }, { deep: true })
+
+// 监听对话切换，更新模型设置
+watch(() => chatStore.activeConversationId, (newConversationId) => {
+  if (newConversationId) {
+    const conversation = chatStore.conversations.find(c => c.id === newConversationId)
+    if (conversation && conversation.modelConfig) {
+      // 更新modelSettings以反映当前对话的模型配置
+      Object.assign(modelSettings, conversation.modelConfig)
+    }
+  }
+})
 
 // 初始化时确保有默认对话
 onMounted(() => {
@@ -429,26 +449,51 @@ let currentAbortController = null
 
 /**
  * 处理发送消息
- * @param {string} content - 消息内容
+ * @param {string|object} messageData - 消息内容或包含文件的消息对象
  */
-const handleSend = async (content) => {
+const handleSend = async (messageData) => {
   // 立即设置loading状态，让用户能够点击停止按钮
   chatStore.setLoading(true)
 
   // 创建新的 AbortController
   currentAbortController = new AbortController()
 
-  chatStore.addMessage(messageHandler.formatMessage('user', content))
+  // 处理消息数据格式
+  let displayContent, apiContent
+  if (typeof messageData === 'string') {
+    // 兼容旧格式：纯文本消息
+    displayContent = messageData
+    apiContent = messageData
+  } else {
+    // 新格式：包含文件的消息对象
+    displayContent = messageData.content // 用户界面显示的内容（文件名和图标）
+    
+    // 构建发送给API的内容（包含文件内容）
+    if (messageData.files && messageData.files.length > 0) {
+      const fileContents = messageData.files.map(file => file.content).join('\n')
+      apiContent = messageData.originalText ? `${messageData.originalText}\n\n${fileContents}` : fileContents
+    } else {
+      apiContent = messageData.originalText || messageData.content
+    }
+  }
+
+  // 添加用户消息（显示文件名和图标）
+  chatStore.addMessage(messageHandler.formatMessage('user', displayContent))
   chatStore.addMessage(messageHandler.formatMessage('assistant', ''))
 
   try {
     const settingsStore = useSettingsStore()
 
-    // 构建发送给API的消息列表
+    // 构建发送给API的消息列表（使用包含文件内容的版本）
     let apiMessages = messages.value.slice(0, -1).map(m => ({
       role: m.role,
       content: m.content
     }))
+    
+    // 替换最后一条用户消息的内容为包含文件内容的版本
+    if (apiMessages.length > 0) {
+      apiMessages[apiMessages.length - 1].content = apiContent
+    }
 
     // 如果当前对话有系统提示词，添加到消息列表开头
     const currentConversation = chatStore.currentConversation
@@ -922,7 +967,7 @@ const handleUserCommand = async (command) => {
   border-radius: 12px;
   overflow: hidden;
   position: relative;
-  padding-bottom: 120px;
+  padding-bottom: 200px;
 }
 
 .chat-header {
