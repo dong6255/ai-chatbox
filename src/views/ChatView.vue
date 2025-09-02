@@ -2,6 +2,9 @@
   <div class="chat-page">
     <!-- 顶部导航栏 -->
     <div class="navigation-bar">
+      <!-- 左上角双击触发区域 -->
+      <div class="top-left-area" @dblclick="handleDoubleClickTopLeft"></div>
+      
       <div class="nav-tabs">
         <div class="nav-tab" :class="{ active: currentTab === 'marketplace' }" @click="currentTab = 'marketplace'">
           <span>应用市场</span>
@@ -317,7 +320,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, nextTick, onMounted, reactive } from 'vue'
+import { ref, computed, watch, nextTick, onMounted, onUnmounted, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { User, SwitchButton, Setting, Shop, QuestionFilled, ArrowDown, DocumentAdd, Download, Upload, Key } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
@@ -377,6 +380,12 @@ watch(modelSettings, (newSettings) => {
 onMounted(() => {
   chatStore.initializeDefaultConversation()
 })
+
+// 处理左上角双击事件，跳转到登录页面
+const handleDoubleClickTopLeft = () => {
+  console.log('双击左上角')
+  router.push('/login')
+}
 
 watch(
   messages,
@@ -677,7 +686,7 @@ const handleUserCommand = async (command) => {
     try {
       await authStore.logout()
       ElMessage.success('已退出登录')
-      router.push('/login')
+      // router.push('/login')
     } catch (error) {
       console.error('登出失败:', error)
       ElMessage.error('登出失败，请重试')
@@ -713,6 +722,22 @@ const handleUserCommand = async (command) => {
 .user-info {
   position: absolute;
   right: 20px;
+}
+
+/* 左上角双击触发区域样式 */
+.top-left-area {
+  position: absolute;
+  left: 20px;
+  top: 0;
+  bottom: 0;
+  width: 60px;
+  cursor: pointer;
+  /* 添加悬停效果，提供视觉反馈 */
+  transition: background-color 0.3s ease;
+}
+
+.top-left-area:hover {
+  background-color: rgba(64, 158, 255, 0.05);
 }
 
 /* 主要工作区域 */

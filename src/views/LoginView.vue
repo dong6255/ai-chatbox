@@ -59,7 +59,7 @@ const authStore = useAuthStore()
 const loginForm = ref()
 
 // 登录状态控制
-const isPswLogin = ref(false) // 默认使用数字证书登录
+const isPswLogin = ref(true) // 默认使用数字证书登录
 const loginLoad = ref(false)
 const certInfo = ref('') // 证书信息
 const isOnline = ref(true) // 是否在线环境
