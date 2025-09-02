@@ -87,10 +87,10 @@
 
 <script setup>
 import { computed, ref, nextTick } from 'vue'
-import { renderMarkdown } from '../utils/markdown'
+import { renderMarkdown } from '@/utils/markdown'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Edit, Delete, RefreshRight, CopyDocument } from '@element-plus/icons-vue'
-import { useChatStore } from '../stores/chat'
+import { useChatStore } from '@/stores/chat'
 
 // 定义组件属性
 const props = defineProps({
@@ -362,6 +362,54 @@ const handleCopyAll = async () => {
 
         &:hover {
           text-decoration: underline;
+        }
+      }
+
+      
+      // 思考过程样式
+      .think-container {
+        margin: 0.75rem 0;
+        border: 1px solid #e0e0e0;
+        border-radius: 6px;
+        background-color: #fafafa;
+        overflow: hidden;
+        
+        .think-header {
+          display: flex;
+          align-items: center;
+          padding: 0.5rem 0.75rem;
+          background-color: #f5f5f5;
+          border-bottom: 1px solid #e0e0e0;
+          cursor: pointer;
+          user-select: none;
+          transition: background-color 0.2s ease;
+          
+          &:hover {
+            background-color: #eeeeee;
+          }
+          
+          .think-icon {
+            margin-right: 0.5rem;
+            font-size: 0.8rem;
+            color: #666;
+            transition: transform 0.2s ease;
+          }
+          
+          .think-title {
+            font-size: 0.85rem;
+            color: #666;
+            font-weight: 500;
+          }
+        }
+        
+        .think-content {
+          padding: 0.75rem;
+          color: #666;
+          font-size: 0.9rem;
+          line-height: 1.5;
+          white-space: pre-wrap;
+          background-color: #fafafa;
+          border-top: 1px solid #e8e8e8;
         }
       }
 

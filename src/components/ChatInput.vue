@@ -1,90 +1,67 @@
 <template>
   <!-- 聊天输入容器 -->
   <div class="chat-input-container">
-    <!-- 输入框和按钮的组合 -->
-    <div class="input-wrapper">
-      <!-- 添加文件上传区域 -->
-      <div class="upload-area" v-if="showUpload">
-        <el-upload
-          class="upload-component"
-          :action="null"
-          :auto-upload="false"
-          :on-change="handleFileChange"
-          :show-file-list="false"
-          multiple
-        >
+    <!-- 添加文件上传区域 -->
+    <div class="upload-area" v-if="showUpload">
+      <el-upload class="upload-component" :action="null" :auto-upload="false" :on-change="handleFileChange"
+        :show-file-list="false" multiple>
         <!-- trigger	触发文件选择框的内容 -->
-          <template #trigger>
-            <el-button type="primary" :icon="Plus">添加文件</el-button>
-          </template>
-        </el-upload>
-        
-        <!-- 预览区域 -->
-        <div class="preview-list" v-if="selectedFiles.length">
-          <div v-for="(file, index) in selectedFiles" :key="index" class="preview-item">
-            <!-- 图片预览 -->
-            <img v-if="isImage(file)" :src="getPreviewUrl(file)" class="preview-image"/>
-            <!-- 文件名预览 -->
-            <div v-else class="file-preview">
-              <el-icon><Document /></el-icon>
-              <span>{{ file.name }}</span>
-            </div>
-            <!-- 删除按钮 -->
-            <el-button 
-              class="delete-btn" 
-              type="danger" 
-              :icon="Delete" 
-              circle
-              @click="removeFile(index)"
-            />
+        <template #trigger>
+          <el-button type="primary" :icon="Plus">添加文件</el-button>
+        </template>
+      </el-upload>
+
+      <!-- 预览区域 -->
+      <div class="preview-list" v-if="selectedFiles.length">
+        <div v-for="(file, index) in selectedFiles" :key="index" class="preview-item">
+          <!-- 图片预览 -->
+          <img v-if="isImage(file)" :src="getPreviewUrl(file)" class="preview-image" />
+          <!-- 文件名预览 -->
+          <div v-else class="file-preview">
+            <el-icon>
+              <Document />
+            </el-icon>
+            <span>{{ file.name }}</span>
           </div>
+          <!-- 删除按钮 -->
+          <el-button class="delete-btn" type="danger" :icon="Delete" circle @click="removeFile(index)" />
         </div>
       </div>
+    </div>
 
-      <el-input
-        v-model="messageText"
-        type="textarea"
-        :rows="2"
-        :autosize="{ minRows: 2, maxRows: 5 }"
-        :placeholder="placeholder"
-        resize="none"
-        @keydown.enter.exact.prevent="handleSend"
-        @keydown.enter.shift.exact="newline"
-        @input="adjustHeight"
-        ref="inputRef"
-      />
-      
-      <div class="button-group">
-        <!-- 添加切换上传区域的按钮 -->
-        <el-tooltip content="上传文件" placement="top">
-          <el-button
-            circle
-            :icon="Upload"
-            @click="toggleUpload"
-          />
-        </el-tooltip>
-        
-        <el-tooltip content="清空对话" placement="top">
-          <el-button
-            circle
-            type="danger"
-            :icon="Delete"
-            @click="handleClear"
-          />
-        </el-tooltip>
-        
-        <el-button
-          type="primary"
-          :loading="loading"
-          @click="handleSend"
-        >
-          <template #icon>
-            <el-icon><Position /></el-icon>
-          </template>
-          发送
-        </el-button>
+    <!-- 输入框和按钮的组合 -->
+    <div class="input-wrapper">
+      <div class="input-container">
+        <el-input v-model="messageText" type="textarea" :rows="1" :autosize="{ minRows: 1, maxRows: 5 }"
+          :placeholder="loading ? '正在处理中，请等待回复完成...' : placeholder" :disabled="loading" resize="none"
+          @keydown.enter.exact.prevent="handleSend" @keydown.enter.shift.exact="newline" @input="adjustHeight"
+          ref="inputRef" class="message-input" />
+
+        <!-- 按钮组放在输入框内部右侧 -->
+        <div class="button-group">
+          <!-- <el-tooltip content="清空对话" placement="top">
+            <el-button
+              circle
+              size="small"
+              type="danger"
+              :icon="Delete"
+              @click="handleClear"
+            />
+          </el-tooltip> -->
+
+          <el-button type="primary" size="small" @click="handleButtonClick" class="send-button">
+            <template #icon>
+              <el-icon>
+                <Position v-if="!loading" />
+                <Close v-else />
+              </el-icon>
+            </template>
+            {{ loading ? '停止' : '发送' }}
+          </el-button>
+        </div>
       </div>
     </div>
+
     <!-- Token计数器 -->
     <div class="token-counter">
       已使用 Token: {{ tokenCount.total }} (提示: {{ tokenCount.prompt }}, 回复: {{ tokenCount.completion }})
@@ -94,8 +71,8 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { Delete, Position, Upload, Plus, Document } from '@element-plus/icons-vue'
-import { useChatStore } from '../stores/chat'
+import { Delete, Position, Upload, Plus, Document, Close } from '@element-plus/icons-vue'
+import { useChatStore } from '@/stores/chat'
 import { ElMessageBox } from 'element-plus'
 
 // 定义组件的属性
@@ -107,7 +84,7 @@ const props = defineProps({
 })
 
 // 定义组件的事件
-const emit = defineEmits(['send', 'clear'])
+const emit = defineEmits(['send', 'clear', 'stop'])
 
 // 使用聊天存储
 const chatStore = useChatStore()
@@ -149,10 +126,24 @@ const getPreviewUrl = (file) => {
   return URL.createObjectURL(file)
 }
 
-// 修改发送处理函数
+/**
+ * 处理发送消息
+ * 在loading状态下禁止发送新消息
+ */
 const handleSend = async () => {
-  if ((!messageText.value.trim() && selectedFiles.value.length === 0) || props.loading) return
-  
+  console.log('handleSend被调用了', messageText.value, selectedFiles.value.length, 'loading:', props.loading)
+
+  // 如果正在loading状态，禁止发送新消息
+  if (props.loading) {
+    console.log('正在处理中，禁止发送新消息')
+    return
+  }
+
+  if (!messageText.value.trim() && selectedFiles.value.length === 0) {
+    console.log('内容为空，不发送')
+    return
+  }
+
   try {
     // 处理文件上传
     const fileContents = await Promise.all(
@@ -231,6 +222,25 @@ const handleClear = async () => {
   }
 }
 
+/**
+ * 处理停止请求
+ */
+const handleStop = () => {
+  emit('stop')
+}
+
+/**
+ * 处理按钮点击事件
+ */
+const handleButtonClick = () => {
+  console.log('按钮被点击了，loading状态:', props.loading)
+  if (props.loading) {
+    handleStop()
+  } else {
+    handleSend()
+  }
+}
+
 const inputRef = ref(null)
 
 // 调整输入框高度的方法
@@ -250,34 +260,66 @@ const adjustHeight = () => {
 <style lang="scss" scoped>
 // 聊天输入容器的样式
 .chat-input-container {
-  padding: 1rem;
-  background-color: var(--bg-color);
-  border-top: 1px solid var(--border-color);
+  position: absolute;
+  bottom: 16px;
+  left: 16px;
+  right: 16px;
+  background-color: white;
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  padding: 16px;
+  z-index: 10;
 }
 
 // 输入框和按钮组合的样式
 .input-wrapper {
-  display: flex;
-  gap: 1rem;
-  margin-bottom: 0.5rem;
-  
-  .el-input {
-    flex: 1;
-    
-    :deep(.el-textarea__inner) {
-      transition: all 0.3s;
-      line-height: 1.5;
-      padding: 8px 12px;
-      overflow-y: auto;
+  margin-bottom: 8px;
+}
+
+.input-container {
+  position: relative;
+  background-color: white;
+  border: 1px solid #dcdfe6;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+
+  .message-input {
+    width: 100%;
+
+    :deep(.el-textarea) {
+      .el-textarea__inner {
+        background-color: transparent;
+        border: none;
+        box-shadow: none;
+        padding: 8px 60px 8px 12px;
+        resize: none;
+        line-height: 1.5;
+        font-size: 14px;
+
+        &:focus {
+          box-shadow: none;
+        }
+      }
     }
   }
 }
 
 // 按钮组的样式
 .button-group {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
   display: flex;
-  gap: 0.5rem;
-  align-items: flex-end;
+  gap: 4px;
+  align-items: center;
+  flex-shrink: 0;
+
+  .send-button {
+    border-radius: 8px;
+    min-width: auto;
+    padding: 4px 8px;
+  }
 }
 
 // Token计数器的样式
@@ -285,6 +327,7 @@ const adjustHeight = () => {
   font-size: 0.8rem;
   color: var(--text-color-secondary);
   text-align: right;
+  margin-top: 8px;
 }
 
 .upload-area {
@@ -292,25 +335,25 @@ const adjustHeight = () => {
   padding: 1rem;
   border: 2px dashed var(--border-color);
   border-radius: var(--border-radius);
-  
+
   .preview-list {
     display: flex;
     flex-wrap: wrap;
     gap: 1rem;
     margin-top: 1rem;
-    
+
     .preview-item {
       position: relative;
       width: 100px;
       height: 100px;
-      
+
       .preview-image {
         width: 100%;
         height: 100%;
         object-fit: cover;
         border-radius: var(--border-radius);
       }
-      
+
       .file-preview {
         width: 100%;
         height: 100%;

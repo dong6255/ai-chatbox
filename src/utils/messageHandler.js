@@ -17,14 +17,22 @@ export const messageHandler = {
      * @param {Object} options - 处理选项，这里传入处理消息和token使用量的回调函数。（使用对象提高可读性和可维护性）
         * @param {Function} options.updateMessage - 更新消息内容的回调
         * @param {Function} options.updateTokenCount - 更新token使用量的回调
+        * @param {AbortSignal} options.abortSignal - 用于中断流式响应的信号
      */
-    async processStreamResponse(response, { updateMessage, updateTokenCount }) {
+    async processStreamResponse(response, { updateMessage, updateTokenCount, abortSignal }) {
         try {
             let fullResponse = '';
             const reader = response.body.getReader();
             const decoder = new TextDecoder();
             // 1.读取流数据
             while (true) {
+                // 检查是否被中断
+                if (abortSignal && abortSignal.aborted) {
+                    console.log('流式响应被用户中断');
+                    reader.cancel();
+                    throw new DOMException('用户中断了请求', 'AbortError');
+                }
+                
                 const { done, value } = await reader.read();
                 if (done) {
                     console.log('流式响应完成');
@@ -91,4 +99,4 @@ export const messageHandler = {
             throw error;
         }
     }
-}; 
+};

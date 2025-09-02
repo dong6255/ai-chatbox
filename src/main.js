@@ -5,8 +5,8 @@ import ElementPlus from 'element-plus'
 import * as ElementPlusIconsVue from '@element-plus/icons-vue'
 import 'element-plus/dist/index.css'
 import './assets/styles/main.scss'
-import router from './router'
-import App from './App.vue'
+import router from '@/router'
+import App from '@/App.vue'
 
 // 使用深色代码主题
 import 'highlight.js/styles/github-dark.css'

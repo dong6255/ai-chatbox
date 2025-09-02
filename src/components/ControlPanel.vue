@@ -1,307 +1,174 @@
 <template>
   <div class="control-panel">
+
     <div class="prompt-section">
       <div class="section-header">
         <h3>提示词设置</h3>
-        <div class="button-group">
-          <el-button
-            class="save-btn"
-            type="primary"
-            size="small"
-            @click="savePrompt"
-          >
-            保存配置
+        <div class="optimize-section">
+          <el-button class="optimize-btn" type="primary" size="small" @click="optimizePrompt">
+            优化
           </el-button>
-          <el-button
-            class="export-btn"
-            type="success"
-            size="small"
-            @click="exportConfig"
-          >
-            导出配置
-          </el-button>
-          <el-upload
-            ref="uploadRef"
-            :show-file-list="false"
-            :before-upload="importConfig"
-            accept=".json"
-            :auto-upload="false"
-            :on-change="handleFileChange"
-          >
-            <el-button class="import-btn" type="warning" size="small">
-              导入配置
-            </el-button>
-          </el-upload>
         </div>
       </div>
-      <el-input
-        v-model="prompt"
-        type="textarea"
-        :rows="25"
-        placeholder="请输入提示词，例如：你是一个专业的编程助手..."
-      />
-      <div class="optimize-section">
-        <el-button
-          class="optimize-btn"
-          type="primary"
-          size="small"
-          @click="optimizePrompt"
-        >
-          提示词优化
-        </el-button>
+      <el-input v-model="prompt" type="textarea" :rows="32" placeholder="请输入提示词，例如：你是一个专业的编程助手..." />
+
+    </div>
+    
+    <!-- 知识库模块 -->
+    <div class="kb-section">
+      <div class="section-header">
+        <h3>知识库设置</h3>
+        <div class="kb-actions">
+          <el-button type="primary" size="small" @click="showKnowledgeBaseDialog = true">
+            添加
+          </el-button>
+        </div>
       </div>
-    </div>
-    <el-divider />
-    <div class="model-section">
-      <h3>模型与参数</h3>
-      <el-form :model="settings" label-width="120px">
-        <el-form-item style="display: flex; align-items: center">
-          <template #label>
-            <div style="display: flex; align-items: center">
-              <span>模型</span>
-              <el-tooltip
-                content="选择要使用的AI模型，不同模型具有不同的能力和特点"
-                placement="top"
+      <div class="kb-content">
+        <div class="kb-list" v-if="selectedKnowledgeBases.length > 0">
+          <div v-for="kb in selectedKnowledgeBases" :key="kb.id" class="kb-item">
+            <span class="kb-name">{{ kb.name }}</span>
+            <el-button type="text" size="small" @click="removeKnowledgeBase(kb.id)">
+              移除
+            </el-button>
+          </div>
+        </div>
+        <div v-else class="kb-empty">
+          <span class="empty-text">暂未选择知识库</span>
+        </div>
+      </div>
+      </div>
+
+      <!-- 数据源配置 -->
+      <div class="kb-section">
+        <div class="section-header">
+          <h3>数据源配置</h3>
+          <el-button 
+            type="primary" 
+            size="small" 
+            @click="showDataSourceDialog = true"
+          >
+            添加
+          </el-button>
+        </div>
+        
+        <div class="kb-content">
+          <div class="kb-list" v-if="selectedDataSources.length > 0">
+            <div 
+              v-for="dataSource in selectedDataSources" 
+              :key="dataSource.id" 
+              class="kb-item"
+            >
+              <span class="kb-name">{{ dataSource.name }}</span>
+              <el-button 
+                type="text" 
+                size="small" 
+                @click="removeDataSource(dataSource.id)"
               >
-                <el-icon class="param-help-icon"><QuestionFilled /></el-icon>
-              </el-tooltip>
+                移除
+              </el-button>
             </div>
-          </template>
-          <el-select v-model="settings.model" class="w-full">
-            <el-option
-              v-for="model in modelOptions"
-              :key="model.value"
-              :label="model.label"
-              :value="model.value"
-            />
-          </el-select>
-        </el-form-item>
-        <el-form-item>
-          <template #label>
-            <div style="display: flex; align-items: center">
-              <span>Temperature</span>
-            <el-tooltip
-              content="控制生成文本的随机性，值越高越随机，值越低越确定。范围：0-1"
-              placement="top"
+          </div>
+          
+          <div v-else class="kb-empty">
+            <span class="empty-text">暂无配置的数据源</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 数据源选择弹窗 -->
+      <el-dialog
+        v-model="showDataSourceDialog"
+        title="选择数据源"
+        width="500px"
+        @close="handleDataSourceDialogClose"
+      >
+        <div class="kb-dialog-content">
+          <div v-if="availableDataSources.length === 0" class="no-kb-message">
+            <span class="empty-text">暂无可用数据源</span>
+          </div>
+          <div v-else class="kb-selection-list">
+            <el-checkbox-group v-model="tempSelectedDataSources">
+              <div 
+                v-for="dataSource in availableDataSources" 
+                :key="dataSource.id" 
+                class="kb-selection-item"
+              >
+                <el-checkbox :label="dataSource.id">
+                  {{ dataSource.name }}
+                </el-checkbox>
+                <div v-if="dataSource.description" class="kb-description">
+                  {{ dataSource.description }}
+                </div>
+              </div>
+            </el-checkbox-group>
+          </div>
+        </div>
+        
+        <template #footer>
+          <span class="dialog-footer">
+            <el-button @click="showDataSourceDialog = false">取消</el-button>
+            <el-button 
+              type="primary" 
+              @click="confirmDataSourceSelection"
+              :disabled="availableDataSources.length === 0"
             >
-              <el-icon class="param-help-icon"><QuestionFilled /></el-icon>
-            </el-tooltip>
-            </div>
-            
-          </template>
-          <el-slider
-            v-model="settings.temperature"
-            :min="0"
-            :max="1"
-            :step="0.1"
-            show-input
-          />
-        </el-form-item>
-        <el-form-item>
-          <template #label>
-            <div style="display: flex; align-items: center">
-              <span>最大Token</span>
-            <el-tooltip
-              content="限制生成文本的最大长度，1个Token约等于0.75个英文单词或1个中文字符"
-              placement="top"
+              确定
+            </el-button>
+          </span>
+        </template>
+      </el-dialog>
+    
+    <!-- 知识库选择弹窗 -->
+    <el-dialog
+      v-model="showKnowledgeBaseDialog"
+      title="选择知识库"
+      width="500px"
+      :before-close="handleDialogClose"
+    >
+      <div class="kb-dialog-content">
+        <div v-if="availableKnowledgeBases.length === 0" class="no-kb-message">
+          <el-empty description="暂无可用知识库" />
+        </div>
+        <div v-else class="kb-selection-list">
+          <div v-for="kb in availableKnowledgeBases" :key="kb.id" class="kb-selection-item">
+            <el-checkbox
+              v-model="kb.selected"
+              @change="handleKnowledgeBaseSelection(kb)"
             >
-              <el-icon class="param-help-icon"><QuestionFilled /></el-icon>
-            </el-tooltip>
-            </div>
-          </template>
-          <el-input-number
-            v-model="settings.maxTokens"
-            :min="1"
-            :max="4096"
-            :step="1"
-          />
-        </el-form-item>
-        <el-form-item>
-          <template #label>
-            <div style="display: flex; align-items: center">
-              <span>Top P</span>
-            <el-tooltip
-              content="核采样参数，控制候选词汇的概率质量。值越小生成越集中，值越大生成越多样"
-              placement="top"
-            >
-              <el-icon class="param-help-icon"><QuestionFilled /></el-icon>
-            </el-tooltip>
-            </div>
-          </template>
-          <el-slider
-            v-model="settings.topP"
-            :min="0"
-            :max="1"
-            :step="0.1"
-            show-input
-          />
-        </el-form-item>
-        <el-form-item>
-          <template #label>
-            <div style="display: flex; align-items: center">
-              <span>Top K</span>
-            <el-tooltip
-              content="限制每次生成时考虑的候选词汇数量，值越小生成越集中"
-              placement="top"
-            >
-              <el-icon class="param-help-icon"><QuestionFilled /></el-icon>
-            </el-tooltip>
-            </div>
-          </template>
-          <el-input-number
-            v-model="settings.topK"
-            :min="1"
-            :max="100"
-            :step="1"
-          />
-        </el-form-item>
-        <el-form-item>
-          <template #label>
-            <div style="display: flex; align-items: center">
-              <span>重复惩罚</span>
-            <el-tooltip
-              content="控制重复内容的生成程度，值大于1会减少重复，值小于1会增加重复"
-              placement="top"
-            >
-              <el-icon class="param-help-icon"><QuestionFilled /></el-icon>
-            </el-tooltip>
-            </div>
-          </template>
-          <el-slider
-            v-model="settings.repetitionPenalty"
-            :min="0.1"
-            :max="2.0"
-            :step="0.1"
-            show-input
-          />
-        </el-form-item>
-        <el-form-item>
-          <template #label>
-            <div style="display: flex; align-items: center">
-              <span>频率惩罚</span>
-            <el-tooltip
-              content="根据词汇在文本中的出现频率进行惩罚，正值减少高频词使用，负值增加高频词使用"
-              placement="top"
-            >
-              <el-icon class="param-help-icon"><QuestionFilled /></el-icon>
-            </el-tooltip>
-            </div>
-          </template>
-          <el-slider
-            v-model="settings.frequencyPenalty"
-            :min="-2.0"
-            :max="2.0"
-            :step="0.1"
-            show-input
-          />
-        </el-form-item>
-        <el-form-item>
-          <template #label>
-            <div style="display: flex; align-items: center">
-              <span>存在惩罚</span>
-            <el-tooltip
-              content="根据词汇是否已出现进行惩罚，正值鼓励生成新词汇和话题，负值倾向于重复已有内容"
-              placement="top"
-            >
-              <el-icon class="param-help-icon"><QuestionFilled /></el-icon>
-            </el-tooltip>
-            </div>
-          </template>
-          <el-slider
-            v-model="settings.presencePenalty"
-            :min="-2.0"
-            :max="2.0"
-            :step="0.1"
-            show-input
-          />
-        </el-form-item>
-        <el-form-item>
-          <template #label>
-            <div style="display: flex; align-items: center">
-              <span>最小概率</span>
-            <el-tooltip
-              content="设置候选词汇的最小概率阈值，低于此值的词汇将被过滤掉"
-              placement="top"
-            >
-              <el-icon class="param-help-icon"><QuestionFilled /></el-icon>
-            </el-tooltip>
-            </div>
-          </template>
-          <el-slider
-            v-model="settings.minP"
-            :min="0"
-            :max="1"
-            :step="0.01"
-            show-input
-          />
-        </el-form-item>
-        <el-form-item>
-          <template #label>
-            <div style="display: flex; align-items: center">
-              <span>种子值</span>
-            <el-tooltip
-              content="用于生成可重现的结果，相同的种子值在相同条件下会产生相同的输出"
-              placement="top"
-            >
-              <el-icon class="param-help-icon"><QuestionFilled /></el-icon>
-            </el-tooltip>
-            </div>
-          </template>
-          <el-input-number
-            v-model="settings.seed"
-            :min="0"
-            :max="999999"
-            :step="1"
-            style="width: 200px;"
-            placeholder="留空为随机"
-          />
-        </el-form-item>
-        <el-form-item>
-          <template #label>
-            <div style="display: flex; align-items: center">
-              <span>停止序列</span>
-            <el-tooltip
-              content="当生成的文本包含这些序列时会停止生成，每行输入一个停止序列"
-              placement="top"
-            >
-              <el-icon class="param-help-icon"><QuestionFilled /></el-icon>
-            </el-tooltip>
-            </div>
-          </template>
-          <el-input
-            v-model="stopSequencesText"
-            type="textarea"
-            :rows="2"
-            placeholder="每行一个停止序列"
-            @input="updateStopSequences"
-          />
-        </el-form-item>
-      </el-form>
-    </div>
-    <el-divider />
-    <!-- <div class="kb-section">
-      <h3>知识库接入</h3>
-      <el-input placeholder="暂未实现" disabled />
-    </div>
-    <el-divider />
-    <div class="data-section">
-      <h3>数据源接入</h3>
-      <el-input placeholder="暂未实现" disabled />
-    </div> -->
+              {{ kb.name }}
+            </el-checkbox>
+            <span class="kb-description">{{ kb.description }}</span>
+          </div>
+        </div>
+      </div>
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="showKnowledgeBaseDialog = false">取消</el-button>
+          <el-button type="primary" @click="confirmKnowledgeBaseSelection">确定</el-button>
+        </span>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
 import { ref, reactive, computed, watch, nextTick, toRef } from "vue";
-import { useSettingsStore, modelOptions } from "../stores/settings";
-import { useChatStore } from "../stores/chat";
+import { useSettingsStore, modelOptions } from "@/stores/settings";
+import { useChatStore } from "@/stores/chat";
+import { useAuthStore } from "@/stores/auth";
 import { ElMessage } from "element-plus";
-import { QuestionFilled } from "@element-plus/icons-vue";
+import { QuestionFilled, ArrowDown } from "@element-plus/icons-vue";
 
+const authStore = useAuthStore();
 /**
  * 导出配置
  */
 const exportConfig = () => {
+    if (!authStore.isLoggedIn) {
+    ElMessage.warning("请先登录后再导出配置");
+    return;
+  }
   if (!chatStore.activeConversationId) {
     ElMessage.warning("请先创建或选择一个对话");
     return;
@@ -345,6 +212,11 @@ const exportConfig = () => {
  */
 const uploadRef = ref();
 const importConfig = (file) => {
+  if (!authStore.isLoggedIn) {
+    ElMessage.warning("请先登录后再导入配置");
+    return false; // 阻止上传
+  }
+
   const reader = new FileReader();
   reader.onload = (e) => {
     try {
@@ -431,7 +303,7 @@ const importConfig = (file) => {
                   "\n"
                 )}\n\n请刷新页面验证配置是否生效。`,
                 type: "success",
-                duration: 5000,
+                duration: 1000,
                 dangerouslyUseHTMLString: false,
               });
             } else {
@@ -463,6 +335,10 @@ const importConfig = (file) => {
  * 处理文件选择变化事件
  */
 const handleFileChange = (file, fileList) => {
+  if (!authStore.isLoggedIn) {
+    ElMessage.warning("请先登录后再导入配置");
+    return;
+  }
   console.log("文件选择事件触发:", file);
   if (file && file.raw) {
     importConfig(file.raw);
@@ -518,6 +394,112 @@ const getCurrentModelConfig = () => {
 
 const prompt = ref(getCurrentSystemPrompt());
 const settings = reactive({ ...getCurrentModelConfig() });
+
+// 知识库相关状态
+const showKnowledgeBaseDialog = ref(false);
+const selectedKnowledgeBases = ref([]);
+const availableKnowledgeBases = ref([]);
+
+// 数据源相关状态
+const showDataSourceDialog = ref(false);
+const selectedDataSources = ref([]);
+const availableDataSources = ref([]);
+const tempSelectedDataSources = ref([]);
+
+/**
+ * 处理知识库选择变化
+ * @param {Object} kb - 知识库对象
+ */
+const handleKnowledgeBaseSelection = (kb) => {
+  console.log('知识库选择变化:', kb);
+};
+
+/**
+ * 移除已选择的知识库
+ * @param {string} kbId - 知识库ID
+ */
+const removeKnowledgeBase = (kbId) => {
+  selectedKnowledgeBases.value = selectedKnowledgeBases.value.filter(kb => kb.id !== kbId);
+  ElMessage.success('知识库已移除');
+};
+
+/**
+ * 确认知识库选择
+ */
+const confirmKnowledgeBaseSelection = () => {
+  const selected = availableKnowledgeBases.value.filter(kb => kb.selected);
+  
+  // 合并新选择的知识库，避免重复
+  selected.forEach(kb => {
+    if (!selectedKnowledgeBases.value.find(existing => existing.id === kb.id)) {
+      selectedKnowledgeBases.value.push({
+        id: kb.id,
+        name: kb.name,
+        description: kb.description
+      });
+    }
+  });
+  
+  showKnowledgeBaseDialog.value = false;
+  
+  if (selected.length > 0) {
+    ElMessage.success(`已添加 ${selected.length} 个知识库`);
+  }
+};
+
+/**
+ * 处理弹窗关闭
+ */
+const handleDialogClose = () => {
+  // 重置选择状态
+  availableKnowledgeBases.value.forEach(kb => {
+    kb.selected = false;
+  });
+  showKnowledgeBaseDialog.value = false;
+};
+
+/**
+ * 移除已选择的数据源
+ * @param {string} dataSourceId - 数据源ID
+ */
+const removeDataSource = (dataSourceId) => {
+  selectedDataSources.value = selectedDataSources.value.filter(ds => ds.id !== dataSourceId);
+  ElMessage.success('数据源已移除');
+};
+
+/**
+ * 确认数据源选择
+ */
+const confirmDataSourceSelection = () => {
+  const selected = availableDataSources.value.filter(ds => 
+    tempSelectedDataSources.value.includes(ds.id)
+  );
+  
+  // 合并新选择的数据源，避免重复
+  selected.forEach(ds => {
+    if (!selectedDataSources.value.find(existing => existing.id === ds.id)) {
+      selectedDataSources.value.push({
+        id: ds.id,
+        name: ds.name
+      });
+    }
+  });
+  
+  showDataSourceDialog.value = false;
+  tempSelectedDataSources.value = [];
+  
+  if (selected.length > 0) {
+    ElMessage.success(`已添加 ${selected.length} 个数据源`);
+  }
+};
+
+/**
+ * 处理数据源弹窗关闭
+ */
+const handleDataSourceDialogClose = () => {
+  tempSelectedDataSources.value = [];
+  showDataSourceDialog.value = false;
+};
 
 // 停止序列的文本表示
 const stopSequencesText = ref("");
@@ -610,6 +592,20 @@ watch(
         newSettings
       );
     }
+    // 同时更新全局设置，确保模型选择生效
+    settingsStore.updateSettings({
+      model: newSettings.model,
+      temperature: newSettings.temperature,
+      maxTokens: newSettings.maxTokens,
+      topP: newSettings.topP,
+      topK: newSettings.topK,
+      repetitionPenalty: newSettings.repetitionPenalty,
+      frequencyPenalty: newSettings.frequencyPenalty,
+      presencePenalty: newSettings.presencePenalty,
+      stopSequences: newSettings.stopSequences,
+      seed: newSettings.seed,
+      minP: newSettings.minP
+    });
   },
   { deep: true }
 );
@@ -639,10 +635,10 @@ const savePrompt = () => {
 };
 
 /**
- * 提示词优化 - 跳转到百度页面
+ * 提示词优化 - 跳转到优化页面并传递原始提示词
  */
 const optimizePrompt = () => {
-  window.open("http://1.95.145.238:18181/", "_blank");
+  window.open("http://29.2.16.115:18181/", "_blank");
 };
 
 // 暴露给父组件的状态和方法
@@ -659,30 +655,58 @@ defineExpose({
   display: flex;
   flex-direction: column;
 }
-.prompt-section,
+
+/* 提示词部分样式 - 添加边框和圆角 */
+.prompt-section {
+  margin-bottom: 1rem;
+  border: 1px solid #e4e7ed;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
 .model-section,
 .kb-section {
   margin-bottom: 1rem;
 }
-.section-header {
+
+/* 提示词标题区域 - 浅灰色背景 */
+.prompt-section .section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0;
+  padding: 12px 16px;
+  background-color: #f5f7fa;
+  /* border-bottom: 1px solid #e4e7ed; */
+}
+
+/* 其他section的header保持原样 */
+.model-section .section-header,
+.kb-section .section-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 10px;
 }
+
 .section-header h3 {
   margin: 0;
   color: #333;
+  font-size: 16px;
+  font-weight: 500;
 }
+
 .button-group {
   display: flex;
   gap: 0.5rem;
   flex-wrap: wrap;
   align-items: center;
 }
+
 .optimize-section {
-  margin-top: 10px;
+  /* margin-top: 10px; */
 }
+
 .save-btn,
 .optimize-btn,
 .export-btn,
@@ -705,6 +729,7 @@ defineExpose({
 .el-upload__input {
   display: none !important;
 }
+
 .w-full {
   width: 100%;
 }
@@ -752,5 +777,132 @@ defineExpose({
   font-size: 14px;
   line-height: 1.5;
   padding: 10px;
+}
+
+/* 提示词输入框区域内边距 */
+.prompt-section .el-input {
+  margin: 16px;
+  width: calc(100% - 32px);
+}
+
+.prompt-section .el-input .el-textarea__inner {
+  border: 1px solid #dcdfe6;
+  border-radius: 6px;
+  transition: border-color 0.3s;
+}
+
+.prompt-section .el-input .el-textarea__inner:focus {
+  border-color: #409eff;
+}
+
+/* 知识库模块样式 */
+.kb-section {
+  margin-bottom: 1rem;
+  border: 1px solid #e4e7ed;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.kb-section .section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0;
+  padding: 12px 16px;
+  background-color: #f5f7fa;
+  border-bottom: 1px solid #e4e7ed;
+}
+
+.kb-content {
+  padding: 16px;
+  min-height: 60px;
+}
+
+.kb-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.kb-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background-color: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 6px;
+  transition: all 0.3s;
+}
+
+.kb-item:hover {
+  background-color: #e9ecef;
+  border-color: #409eff;
+}
+
+.kb-name {
+  font-size: 14px;
+  color: #333;
+  font-weight: 500;
+}
+
+.kb-empty {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 60px;
+  color: #909399;
+  font-size: 14px;
+}
+
+.empty-text {
+  color: #909399;
+}
+
+/* 知识库弹窗样式 */
+.kb-dialog-content {
+  min-height: 200px;
+}
+
+.no-kb-message {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 200px;
+}
+
+.kb-selection-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.kb-selection-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px;
+  border: 1px solid #e4e7ed;
+  border-radius: 6px;
+  transition: all 0.3s;
+}
+
+.kb-selection-item:hover {
+  background-color: #f5f7fa;
+  border-color: #409eff;
+}
+
+.kb-description {
+  font-size: 12px;
+  color: #909399;
+  margin-left: 24px;
+}
+
+.dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
 }
 </style>

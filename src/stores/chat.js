@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
+import { useSettingsStore } from './settings.js'
 
 export const useChatStore = defineStore('chat', {
     state: () => ({
@@ -34,9 +35,16 @@ export const useChatStore = defineStore('chat', {
     },
 
     actions: {
-        // 创建新对话
+        /**
+         * 创建新对话
+         * 使用推荐的默认模型配置参数
+         * @returns {string} 新创建的对话ID
+         */
         createNewConversation() {
             const id = Date.now().toString()
+            const settingsStore = useSettingsStore()
+            const recommendedDefaults = settingsStore.getRecommendedDefaults()
+            
             const conversation = {
                 id,
                 title: '新对话',
@@ -44,13 +52,14 @@ export const useChatStore = defineStore('chat', {
                 systemPrompt: '', // 每个对话独立的系统提示词
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString(),
-                // 为每个对话添加独立的模型配置
+                // 为每个对话添加独立的模型配置，使用推荐的默认值
                 modelConfig: {
-                    model: null,
-                    temperature: null,
-                    maxTokens: null,
-                    topP: null,
-                    topK: null
+                    model: recommendedDefaults.model,
+                    temperature: recommendedDefaults.temperature,
+                    maxTokens: recommendedDefaults.maxTokens,
+                    topP: recommendedDefaults.topP,
+                    topK: recommendedDefaults.topK,
+                    repetitionPenalty: recommendedDefaults.repetitionPenalty
                 }
             }
             
@@ -153,6 +162,11 @@ export const useChatStore = defineStore('chat', {
             this.tokenCount.total += usage.total_tokens
         },
 
+        // 设置加载状态
+        setLoading(loading) {
+            this.isLoading = loading
+        },
+
         clearMessages() {
             if (!this.activeConversationId) return
             
@@ -163,8 +177,14 @@ export const useChatStore = defineStore('chat', {
             }
         },
         
-        // 初始化默认对话（如果没有对话）
+        /**
+         * 初始化默认对话（如果没有对话）
+         * 为现有对话添加推荐的默认配置
+         */
         initializeDefaultConversation() {
+            const settingsStore = useSettingsStore()
+            const recommendedDefaults = settingsStore.getRecommendedDefaults()
+            
             // 为现有对话添加 systemPrompt 和 modelConfig 字段（兼容性处理）
             this.conversationList.forEach(id => {
                 if (this.conversations[id]) {
@@ -172,15 +192,25 @@ export const useChatStore = defineStore('chat', {
                     if (!this.conversations[id].hasOwnProperty('systemPrompt')) {
                         this.conversations[id].systemPrompt = ''
                     }
-                    // 添加 modelConfig 字段
+                    // 添加 modelConfig 字段，使用推荐的默认值
                     if (!this.conversations[id].hasOwnProperty('modelConfig')) {
                         this.conversations[id].modelConfig = {
-                            model: null,
-                            temperature: null,
-                            maxTokens: null,
-                            topP: null,
-                            topK: null
+                            model: recommendedDefaults.model,
+                            temperature: recommendedDefaults.temperature,
+                            maxTokens: recommendedDefaults.maxTokens,
+                            topP: recommendedDefaults.topP,
+                            topK: recommendedDefaults.topK,
+                            repetitionPenalty: recommendedDefaults.repetitionPenalty
                         }
+                    } else {
+                        // 如果已有modelConfig但某些字段为null，则使用推荐默认值
+                        const config = this.conversations[id].modelConfig
+                        if (config.model === null) config.model = recommendedDefaults.model
+                        if (config.temperature === null) config.temperature = recommendedDefaults.temperature
+                        if (config.maxTokens === null) config.maxTokens = recommendedDefaults.maxTokens
+                        if (config.topP === null) config.topP = recommendedDefaults.topP
+                        if (config.topK === null) config.topK = recommendedDefaults.topK
+                        if (config.repetitionPenalty === null) config.repetitionPenalty = recommendedDefaults.repetitionPenalty
                     }
                 }
             })

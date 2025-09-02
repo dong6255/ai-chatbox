@@ -1,6 +1,4 @@
-import { useSettingsStore } from '../stores/settings'
-
-const API_BASE_URL = 'https://api.siliconflow.cn/v1'
+import { useSettingsStore, modelOptions } from '@/stores/settings'
 
 /**
  * 获取当前模型的配置信息
@@ -9,7 +7,7 @@ const API_BASE_URL = 'https://api.siliconflow.cn/v1'
 const getCurrentModelConfig = () => {
     const settingsStore = useSettingsStore()
     
-    // 检查是否为自定义模型
+    // 首先检查是否为自定义模型
     const customModel = settingsStore.customModels.find(model => model.name === settingsStore.model)
     
     if (customModel) {
@@ -19,10 +17,21 @@ const getCurrentModelConfig = () => {
         }
     }
     
-    // 默认配置
+    // 从modelOptions中查找当前模型的配置
+    const modelConfig = modelOptions.find(option => option.value === settingsStore.model)
+    
+    if (modelConfig) {
+        return {
+            apiKey: settingsStore.apiKey || modelConfig.defaultApiKey,
+            baseUrl: modelConfig.baseUrl
+        }
+    }
+    
+    // 默认配置（兜底）- 使用第一个模型选项的配置
+    const defaultModel = modelOptions[0]
     return {
-        apiKey: settingsStore.apiKey,
-        baseUrl: API_BASE_URL
+        apiKey: settingsStore.apiKey || defaultModel.defaultApiKey,
+        baseUrl: defaultModel.baseUrl
     }
 }
 
@@ -39,7 +48,7 @@ const createHeaders = () => {
 }
 
 export const chatApi = {
-    async sendMessage(messages, stream = false, modelConfig = null) {
+    async sendMessage(messages, stream = false, modelConfig = null, abortSignal = null) {
         const settingsStore = useSettingsStore()
         
         // 如果没有提供模型配置，使用全局设置
@@ -92,7 +101,8 @@ export const chatApi = {
                 ...createHeaders(),
                 ...(stream && { 'Accept': 'text/event-stream' })
             },
-            body: JSON.stringify(payload)
+            body: JSON.stringify(payload),
+            ...(abortSignal && { signal: abortSignal })
         })
 
         if (!response.ok) {

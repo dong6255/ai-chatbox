@@ -9,7 +9,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@alova/scene-vue": "^1.6.2",
     "@element-plus/icons-vue": "^2.3.1",
+    "alova": "^3.3.4",
     "axios": "^1.7.7",
     "element-plus": "^2.8.8",
     "highlight.js": "^11.10.0",
@@ -23,6 +25,10 @@
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.0.5",
+    "autoprefixer": "^10.4.21",
+    "postcss-import": "^16.1.1",
+    "postcss-nested": "^7.0.2",
+    "postcss-preset-env": "^10.3.1",
     "vite": "^5.3.1"
   }
 }

@@ -43,7 +43,7 @@
 
 <script setup>
 import { onMounted } from 'vue'
-import { useChatStore } from '../stores/chat'
+import { useChatStore } from '@/stores/chat'
 import { Plus, Delete } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 

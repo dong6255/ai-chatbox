@@ -101,7 +101,7 @@
 
 <script setup>
 import { ref, reactive, computed, watch } from 'vue'
-import { useSettingsStore, modelOptions } from '../stores/settings'
+import { useSettingsStore, modelOptions } from '@/stores/settings'
 import { ElMessage } from 'element-plus'
 
 // 定义组件的props
@@ -121,10 +121,24 @@ const visible = computed({
   set: (value) => emit('update:modelValue', value)
 })
 
-// 获取当前模型的API密钥
+/**
+ * 获取当前模型的API密钥
+ * @returns {string} 当前模型对应的API密钥
+ */
 const getCurrentApiKey = () => {
+  // 首先检查自定义模型
   const customModel = settingsStore.customModels.find(model => model.name === settingsStore.model)
-  return customModel ? customModel.apiKey : settingsStore.apiKey
+  if (customModel) {
+    return customModel.apiKey
+  }
+  
+  // 从modelOptions中查找当前模型的默认API密钥
+  const modelConfig = modelOptions.find(option => option.value === settingsStore.model)
+  if (modelConfig && modelConfig.defaultApiKey) {
+    return settingsStore.apiKey || modelConfig.defaultApiKey
+  }
+  
+  return settingsStore.apiKey
 }
 
 // 设置对象，使用reactive进行响应式处理
@@ -142,7 +156,13 @@ const settings = reactive({
 // 监听模型变化，自动更新API密钥显示
 watch(() => settings.model, (newModel) => {
   const customModel = settingsStore.customModels.find(model => model.name === newModel)
-  settings.apiKey = customModel ? customModel.apiKey : settingsStore.apiKey
+  if (customModel) {
+    settings.apiKey = customModel.apiKey
+  } else {
+    // 从modelOptions中查找当前模型的默认API密钥
+    const modelConfig = modelOptions.find(option => option.value === newModel)
+    settings.apiKey = modelConfig ? modelConfig.defaultApiKey : settingsStore.apiKey
+  }
 })
 
 // 处理深色模式切换
@@ -152,6 +172,12 @@ const handleDarkModeChange = (value) => {
 
 // 保存设置
 const handleSave = () => {
+  console.log('🔧 === 保存设置调试信息 ===')
+  console.log('🔧 handleSave 函数被调用')
+  console.log('🔧 保存前 - settingsStore.model:', settingsStore.model)
+  console.log('🔧 保存前 - settings.model:', settings.model)
+  console.log('🔧 保存前 - localStorage值:', localStorage.getItem('ai-chat-settings'))
+  
   // 检查当前模型是否为自定义模型
   const customModelIndex = settingsStore.customModels.findIndex(model => model.name === settings.model)
   
@@ -163,6 +189,9 @@ const handleSave = () => {
     settingsStore.apiKey = settings.apiKey
   }
   
+  // 直接更新 store 的 model 属性
+  settingsStore.model = settings.model
+  
   // 更新其他设置
   settingsStore.updateSettings({
     isDarkMode: settings.isDarkMode,
@@ -173,6 +202,10 @@ const handleSave = () => {
     topP: settings.topP,
     topK: settings.topK
   })
+  
+  console.log('🔧 保存后 - settingsStore.model:', settingsStore.model)
+  console.log('🔧 保存后 - localStorage值:', localStorage.getItem('ai-chat-settings'))
+  console.log('🔧 === 保存设置完成 ===')
   
   ElMessage.success('设置已保存')
   visible.value = false
