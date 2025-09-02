@@ -638,7 +638,31 @@ const savePrompt = () => {
  * 提示词优化 - 跳转到优化页面并传递原始提示词
  */
 const optimizePrompt = () => {
-  window.open("http://29.2.16.115:18181/", "_blank");
+  // 准备要传递的数据
+  const promptData = {
+    prompt: prompt.value || ''
+  };
+  
+  // 打开新窗口
+  const newWindow = window.open("http://0.0.0.0:18181/", "_blank");
+  // 等待新窗口加载完成后发送数据
+  if (newWindow) {
+    const sendData = () => {
+      try {
+        newWindow.postMessage(promptData, '*');
+        console.log('数据已发送' + promptData['prompt'] );
+
+      } catch (error) {
+        console.error('发送数据失败:', error);
+      }
+    };
+    
+    // 延迟发送数据，确保目标页面已加载
+    setTimeout(sendData, 1000);
+    
+    // 也可以监听窗口加载事件
+    newWindow.addEventListener('load', sendData);
+  }
 };
 
 // 暴露给父组件的状态和方法

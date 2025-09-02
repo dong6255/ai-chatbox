@@ -32,7 +32,7 @@
     <!-- 输入框和按钮的组合 -->
     <div class="input-wrapper">
       <div class="input-container">
-        <el-input v-model="messageText" type="textarea" :rows="1" :autosize="{ minRows: 1, maxRows: 5 }"
+        <el-input v-model="messageText" type="textarea" :rows="3" :autosize="{ minRows: 3, maxRows: 8 }"
           :placeholder="loading ? '正在处理中，请等待回复完成...' : placeholder" :disabled="loading" resize="none"
           @keydown.enter.exact.prevent="handleSend" @keydown.enter.shift.exact="newline" @input="adjustHeight"
           ref="inputRef" class="message-input" />
@@ -291,10 +291,10 @@ const adjustHeight = () => {
         background-color: transparent;
         border: none;
         box-shadow: none;
-        padding: 8px 60px 8px 12px;
+        padding: 16px 60px 16px 16px;
         resize: none;
-        line-height: 1.5;
-        font-size: 14px;
+        line-height: 1.6;
+        font-size: 16px;
 
         &:focus {
           box-shadow: none;

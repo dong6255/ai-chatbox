@@ -3,7 +3,9 @@
     <!-- 顶部导航栏 -->
     <div class="navigation-bar">
       <!-- 左上角双击触发区域 -->
-      <div class="top-left-area" @dblclick="handleDoubleClickTopLeft"></div>
+      <div class="top-left-area" @click="handleClickTopLeft">
+        <span class="site-name">模型应用开发平台</span>
+      </div>
       
       <div class="nav-tabs">
         <div class="nav-tab" :class="{ active: currentTab === 'marketplace' }" @click="currentTab = 'marketplace'">
@@ -89,12 +91,13 @@
               </el-select>
 
               <!-- 模型参数设置按钮 -->
-              <el-dropdown trigger="click" placement="bottom" style="margin-right: 10px;">
-                <el-button size="medium" type="text" class="settings-btn">
-                  <el-icon>
-                    <Setting />
-                  </el-icon>
-                </el-button>
+              <el-tooltip content="模型参数配置" placement="top">
+                <el-dropdown trigger="click" placement="bottom" style="margin-right: 10px;">
+                  <el-button size="large" type="text" class="settings-btn">
+                    <el-icon>
+                      <Setting />
+                    </el-icon>
+                  </el-button>
                 <template #dropdown>
                   <el-dropdown-menu class="model-settings-dropdown">
                     <div class="model-settings-content">
@@ -244,6 +247,7 @@
                   </el-dropdown-menu>
                 </template>
               </el-dropdown>
+              </el-tooltip>
 
               <!-- 保存配置按钮 -->
               <el-dropdown trigger="click" placement="bottom-end">
@@ -381,10 +385,31 @@ onMounted(() => {
   chatStore.initializeDefaultConversation()
 })
 
-// 处理左上角双击事件，跳转到登录页面
-const handleDoubleClickTopLeft = () => {
-  console.log('双击左上角')
-  router.push('/login')
+// 处理左上角连续四次点击事件，跳转到登录页面
+let clickCount = 0
+let clickTimer = null
+
+const handleClickTopLeft = () => {
+  clickCount++
+  console.log(`点击次数: ${clickCount}`)
+  
+  // 清除之前的定时器
+  if (clickTimer) {
+    clearTimeout(clickTimer)
+  }
+  
+  // 如果达到四次点击，跳转到登录页面
+  if (clickCount >= 4) {
+    console.log('连续四次点击，跳转到登录页面')
+    router.push('/login')
+    clickCount = 0
+    return
+  }
+  
+  // 设置定时器，1秒后重置点击计数
+  clickTimer = setTimeout(() => {
+    clickCount = 0
+  }, 1000)
 }
 
 watch(
@@ -730,14 +755,19 @@ const handleUserCommand = async (command) => {
   left: 20px;
   top: 0;
   bottom: 0;
-  width: 60px;
-  cursor: pointer;
-  /* 添加悬停效果，提供视觉反馈 */
-  transition: background-color 0.3s ease;
+  width: 200px;
+  cursor: default;
+  display: flex;
+  align-items: center;
+  padding-left: 10px;
 }
 
-.top-left-area:hover {
-  background-color: rgba(64, 158, 255, 0.05);
+.site-name {
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+  user-select: none;
+  letter-spacing: 0.5px;
 }
 
 /* 主要工作区域 */
@@ -836,7 +866,7 @@ const handleUserCommand = async (command) => {
 .arrangement-right {
   display: flex;
   align-items: center;
-  /* gap: 12px; */
+  gap: 12px; 
 }
 
 .arrangement-left {
@@ -1074,5 +1104,23 @@ const handleUserCommand = async (command) => {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+/* 设置按钮样式 */
+.settings-btn {
+  width: 40px !important;
+  height: 40px !important;
+  border-radius: 8px !important;
+  transition: all 0.3s ease !important;
+}
+
+.settings-btn:hover {
+  background-color: #f0f9ff !important;
+  color: #409eff !important;
+  transform: scale(1.05) !important;
+}
+
+.settings-btn .el-icon {
+  font-size: 18px !important;
 }
 </style>
