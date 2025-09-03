@@ -5,6 +5,16 @@ import vue from '@vitejs/plugin-vue'
 
 // https://vitejs.dev/config/
 export default defineConfig({
+  server: {
+    // host: '0.0.0.0', // 监听所有地址
+    proxy: {
+      '/api': {
+        target: 'http://www.pxjzpt.ln/',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, '')
+      }
+    }
+  },
   plugins: [
     vue(),
   ],

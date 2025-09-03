@@ -271,7 +271,7 @@
                       </el-icon>
                       导出配置
                     </el-dropdown-item>
-                    <el-dropdown-item @click="importConfig" :disabled="!authStore.isLoggedIn">
+                    <el-dropdown-item @click="triggerImportConfig" :disabled="!authStore.isLoggedIn">
                       <el-icon>
                         <Upload />
                       </el-icon>
@@ -320,6 +320,15 @@
 
     <!-- 设置面板 -->
     <settings-panel v-model="showSettingsPanel" />
+    
+    <!-- 隐藏的文件上传组件用于导入配置 -->
+    <input 
+      ref="fileInputRef" 
+      type="file" 
+      accept=".json" 
+      style="display: none" 
+      @change="handleImportFileChange"
+    />
   </div>
 </template>
 
@@ -356,6 +365,7 @@ const isLoading = computed(() => chatStore.isLoading)
 const messagesContainer = ref(null)
 const controlPanelRef = ref(null)
 const showSettingsPanel = ref(false)
+const fileInputRef = ref(null)
 
 // 编排区域相关状态
 const modelSettings = reactive({
@@ -392,7 +402,7 @@ watch(modelSettings, (newSettings) => {
 // 监听对话切换，更新模型设置
 watch(() => chatStore.activeConversationId, (newConversationId) => {
   if (newConversationId) {
-    const conversation = chatStore.conversations.find(c => c.id === newConversationId)
+    const conversation = chatStore.conversations[newConversationId]
     if (conversation && conversation.modelConfig) {
       // 更新modelSettings以反映当前对话的模型配置
       Object.assign(modelSettings, conversation.modelConfig)
@@ -588,7 +598,12 @@ const saveConfig = () => {
  */
 const exportConfig = () => {
   try {
+    // 获取当前对话的系统提示词
+    const currentConversation = chatStore.currentConversation
+    const systemPrompt = currentConversation ? currentConversation.systemPrompt || '' : ''
+    
     const config = {
+      systemPrompt: systemPrompt,
       modelSettings: { ...modelSettings },
       timestamp: new Date().toISOString()
     }
@@ -608,6 +623,29 @@ const exportConfig = () => {
 }
 
 /**
+ * 触发导入配置文件选择器
+ */
+const triggerImportConfig = () => {
+  if (!authStore.isLoggedIn) {
+    ElMessage.warning('请先登录后再导入配置')
+    return
+  }
+  fileInputRef.value?.click()
+}
+
+/**
+ * 处理文件选择变化事件
+ */
+const handleImportFileChange = (event) => {
+  const file = event.target.files[0]
+  if (file) {
+    importConfig(file)
+    // 清空文件输入框，允许重复选择同一文件
+    event.target.value = ''
+  }
+}
+
+/**
  * 导入配置文件
  */
 const importConfig = (file) => {
@@ -615,13 +653,47 @@ const importConfig = (file) => {
   reader.onload = (e) => {
     try {
       const config = JSON.parse(e.target.result)
-      if (config.modelSettings) {
-        Object.assign(modelSettings, config.modelSettings)
-        stopSequencesText.value = modelSettings.stopSequences.join('\n')
-        ElMessage.success('配置已导入')
-      } else {
+      
+      // 检查配置文件格式
+      if (!config.modelSettings && !config.modelConfig && !config.systemPrompt) {
         ElMessage.error('配置文件格式不正确')
+        return
       }
+      
+      // 导入模型设置（支持两种格式：modelSettings 和 modelConfig）
+      const modelConfigData = config.modelSettings || config.modelConfig
+      if (modelConfigData) {
+        Object.assign(modelSettings, modelConfigData)
+        if (modelSettings.stopSequences) {
+          stopSequencesText.value = modelSettings.stopSequences.join('\n')
+        }
+      }
+      
+      // 导入系统提示词到当前对话
+      if (config.systemPrompt && chatStore.activeConversationId) {
+        chatStore.updateConversationSystemPrompt(
+          chatStore.activeConversationId,
+          config.systemPrompt
+        )
+        // 同时更新全局设置以触发持久化
+        settingsStore.updateSettings({ systemPrompt: config.systemPrompt })
+      }
+      
+      // 强制触发界面更新
+      nextTick(() => {
+        // 临时切换对话ID来触发 ControlPanel 的 watch 更新
+        const currentConversationId = chatStore.activeConversationId
+        if (currentConversationId) {
+          // 临时设置为 null，然后恢复，触发 watch
+          chatStore.activeConversationId = null
+          nextTick(() => {
+            chatStore.activeConversationId = currentConversationId
+            console.log('配置导入完成，界面已更新')
+          })
+        }
+      })
+      
+      ElMessage.success('配置已导入')
     } catch (error) {
       ElMessage.error('导入配置失败：文件格式错误')
     }
@@ -698,7 +770,7 @@ const certLogin = async () => {
         ElMessage.error('未安装控件，请安装控件后重试')
         return
       }
-      const initParam = "<?xml version=\"1.0\" encoding=\"utf-8\"?><authinfo><liblist><lib type=\"SKF\" version=\"1.0\" dllname=\"L29wdC9HQVNTL2xpYlNLRi9saWJTS0ZfR0FfYXBpX21pcHM2NC5zby4wLjMuMTAuMDQxMw==\"><algid val=\"SHA1\" sm2_hashalg=\"SM3\" /></lib><lib type=\"SKF\" version=\"1.0\" dllname=\"L29wdC9HQVNTL2xpYlNLRi9saWJTS0ZfR0FGX2FwaV9taXBzNjQuc28uMC4zLjExLjA0MTM=\"><algid val=\"SHA1\" sm2_hashalg=\"SM3\" /></lib><lib type=\"CSP\" version=\"1.0\" dllname=\"TWljcm9zb2Z0IEVuaGFuY2VkIENyeXB0b2dyYXBoaWMgUHJvdmlkZXIgdjEuMA==\"><algid val=\"SHA1\" sm2_hashalg=\"SHA1\" /></lib><lib type=\"CSP\" version=\"1.0\" dllname=\"R0FTUyBDcnlwdG9ncmFwaGljIFNlcnZpY2UgUHJvdmlkZXIgdjEuMA==\"><algid val=\"SHA1\" sm2_hashalg=\"SHA1\" /></lib><lib type=\"CSP\" version=\"1.0\" dllname=\"ZVNhZmUgQ3J5cHRvZ3JhcGhpYyBTZXJ2aWNlIFByb3ZpZGVyIHYxLjA=\"><algid val=\"SHA1\" sm2_hashalg=\"SHA1\" /></lib><lib type=\"SKF\" version=\"1.1\" dllname=\"R0FLRVlfU0tGLmRsbA==\"><algid val=\"SHA1\" sm2_hashalg=\"SM3\" /></lib><lib type=\"CSP\" version=\"1.0\" dllname=\"R0FTU19GIENyeXB0b2dyYXBoaWMgU2VydmljZSBQcm92aWRlciB2MS4w\"><algid val=\"SHA1\" sm2_hashalg=\"SHA1\" /></lib></liblist></authinfo>";
+      const initParam = "<\?xml version=\"1.0\" encoding=\"utf-8\"\?><authinfo><liblist><lib type=\"SKF\" version=\"1.0\" dllname=\"L29wdC9HQVNTL2xpYlNLRi9saWJTS0ZfR0FfYXBpX21pcHM2NC5zby4wLjMuMTAuMDQxMw==\"><algid val=\"SHA1\" sm2_hashalg=\"SM3\" /></lib><lib type=\"SKF\" version=\"1.0\" dllname=\"L29wdC9HQVNTL2xpYlNLRi9saWJTS0ZfR0FGX2FwaV9taXBzNjQuc28uMC4zLjExLjA0MTM=\"><algid val=\"SHA1\" sm2_hashalg=\"SM3\" /></lib><lib type=\"SKF\" version=\"1.0\" dllname=\"L29wdC9HQVNTL2xpYlNLRi9saWJTS0ZfR0FfYXBpX2FybTY0LnNvLjAuMy4xMC4wNDEz\"><algid val=\"SHA1\" sm2_hashalg=\"SM3\" /></lib><lib type=\"SKF\" version=\"1.0\" dllname=\"L29wdC9HQVNTL2xpYlNLRi9saWJTS0ZfR0FGX2FwaV9hcm02NC5zby4wLjMuMTEuMDQxMw==\"><algid val=\"SHA1\" sm2_hashalg=\"SM3\" /></lib><lib type=\"SKF\" version=\"1.0\" dllname=\"L29wdC9HQVNTL2xpYlNLRi9saWJTS0ZfR0FfYXBpX3g4Nl82NC5zby4wLjMuMTAuMDQxMw==\"><algid val=\"SHA1\" sm2_hashalg=\"SM3\" /></lib><lib type=\"SKF\" version=\"1.0\" dllname=\"L29wdC9HQVNTL2xpYlNLRl9HQUZfYXBpX3g4Ni5zby4wLjMuMTEuMDQxMw==\"><algid val=\"SHA1\" sm2_hashalg=\"SM3\" /></lib><lib type=\"SKF\" version=\"1.0\" dllname=\"L29wdC9HQVNTL2xpYlNLRl9HQV9hcGlfeDg2XzY0LnNvLjAuMy4xMC4wNDEz\"><algid val=\"SHA1\" sm2_hashalg=\"SM3\" /></lib><lib type=\"SKF\" version=\"1.0\" dllname=\"L29wdC9HQVNTL2xpYlNLRi9saWJTS0ZfR0FGX2FwaV9hcm02NC5zby4wLjMuMTEuMDQxMw==\"><algid val=\"SHA1\" sm2_hashalg=\"SM3\" /></lib><lib type=\"SKF\" version=\"1.0\" dllname=\"L29wdC9HQVNTL2xpYlNLRl9HQUZfYXBpX3g4Ni5zby4wLjMuMTEuMDQxMw==\"><algid val=\"SHA1\" sm2_hashalg=\"SM3\" /></lib><lib type=\"SKF\" version=\"1.0\" dllname=\"L29wdC9HQVNTL2xpYlNLRl9HQV9hcGlfeDg2XzY0LnNvLjAuMy4xMC4wNDEz\"><algid val=\"SHA1\" sm2_hashalg=\"SM3\" /></lib><lib type=\"SKF\" version=\"1.0\" dllname=\"L29wdC9HQVNTL2xpYlNLRl9HQV9hcGlfbWlwczY0LnNvLjAuMy40LjkyMw==\"><algid val=\"SHA1\" sm2_hashalg=\"SM3\" /></lib><lib type=\"SKF\" version=\"1.0\" dllname=\"L29wdC9HQVNTL2xpYlNLRi9saWJTS0ZfR0FfYXBpX2FybTY0LnNvLjAuMy45LjAyMjU=\"><algid val=\"SHA1\" sm2_hashalg=\"SM3\" /></lib><lib type=\"SKF\" version=\"1.0\" dllname=\"L29wdC9HQVNTL2xpYlNLRi9saWJTS0ZfR0FfYXBpX2FybTY0LnNvLjAuMy4xMS4wNDEz\"><algid val=\"SHA1\" sm2_hashalg=\"SM3\" /></lib><lib type=\"SKF\" version=\"1.0\" dllname=\"L29wdC9HQVNTL2xpYlNLRi9saWJTS0ZfR0FfYXBpX2FybTY0LnNvLjAuMy4xMC4wNDEz\"><algid val=\"SHA1\" sm2_hashalg=\"SM3\" /></lib><lib type=\"CSP\" version=\"1.0\" dllname=\"TWljcm9zb2Z0IEVuaGFuY2VkIENyeXB0b2dyYXBoaWMgUHJvdmlkZXIgdjEuMA==\"><algid val=\"SHA1\" sm2_hashalg=\"SHA1\" /></lib><lib type=\"CSP\" version=\"1.0\" dllname=\"R0FTUyBDcnlwdG9ncmFwaGljIFNlcnZpY2UgUHJvdmlkZXIgdjEuMA==\"><algid val=\"SHA1\" sm2_hashalg=\"SHA1\" /></lib><lib type=\"CSP\" version=\"1.0\" dllname=\"ZVNhZmUgQ3J5cHRvZ3JhcGhpYyBTZXJ2aWNlIFByb3ZpZGVyIHYxLjA=\"><algid val=\"SHA1\" sm2_hashalg=\"SHA1\" /></lib><lib type=\"SKF\" version=\"1.1\" dllname=\"R0FLRVlfU0tGLmRsbA==\"><algid val=\"SHA1\" sm2_hashalg=\"SM3\" /></lib><lib type=\"CSP\" version=\"1.0\" dllname=\"R0FTU19GIENyeXB0b2dyYXBoaWMgU2VydmljZSBQcm92aWRlciB2MS4w\"><algid val=\"SHA1\" sm2_hashalg=\"SHA1\" /></lib><lib type=\"SKF\" version=\"1.1\" dllname=\"R0FGS0VZX1NLRi5kbGw=\"><algid val=\"SHA1\" sm2_hashalg=\"SM3\" /></lib></liblist></authinfo>";
       pnxclient.JIT_GW_ExtInterface.ClearFilter()
       pnxclient.JIT_GW_ExtInterface.Initialize("", initParam)
       pnxclient.JIT_GW_ExtInterface.SetChooseSingleCert(1)
@@ -948,6 +1020,10 @@ const handleUserCommand = async (command) => {
 
 .settings-panel {
   width: 50%;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
   /* border-right: 1px solid var(--border-color); */
 }
 
@@ -956,8 +1032,7 @@ const handleUserCommand = async (command) => {
   display: flex;
   flex-direction: column;
   position: relative;
-  padding: 16px;
-}
+  padding: 0 1rem 1rem 1rem;}
 
 .debug-preview-wrapper {
   display: flex;

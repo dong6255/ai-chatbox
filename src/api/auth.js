@@ -146,7 +146,8 @@ function verifySignature(certData, signature, randomStr) {
 
 // 获取随机数接口
 export const getRandom = (credentials) => {
-  return alovaInstance.Post(`http://29.2.16.115:8888/pxjzpt/jwzh/openApi/random`, credentials, {
+  // return alovaInstance.Post(`http://29.2.16.115:8888/pxjzpt/jwzh/openApi/random`, credentials, {
+  return alovaInstance.Post(`/jwzh/openApi/random`, credentials, {
     localCache: false,
     transform: (data, headers) => {
       console.log("data", data)
@@ -160,7 +161,17 @@ export const getRandom = (credentials) => {
 
 // 证书登录接口
 export const returnSignResult = (params) => {
-  return alovaInstance.Post(`http://29.2.16.115:8888/pxjzpt/jwzh/openApi/pkiLogin`, params, {
+  // 转换为URL编码字符串
+  const urlEncodedData = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    urlEncodedData.append(key, value);
+  }
+  return alovaInstance.Post(`/jwzh/openApi/pkiLogin`, urlEncodedData,{
+  // return alovaInstance.Post(`http://29.2.16.115:8888/pxjzpt/jwzh/openApi/pkiLogin`, params, {
+    // 设置请求头
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded'
+    },
     localCache: false,
     transform: (data, headers) => {
       console.log("data", data)

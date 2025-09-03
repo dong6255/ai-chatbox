@@ -10,7 +10,7 @@
           </el-button>
         </div>
       </div>
-      <el-input v-model="prompt" type="textarea" :rows="32" placeholder="请输入提示词，例如：你是一个专业的编程助手..." />
+      <el-input v-model="prompt" type="textarea" :rows="32" resize="none" placeholder="请输入提示词，例如：你是一个专业的编程助手..." />
 
     </div>
     
@@ -681,9 +681,10 @@ defineExpose({
 .control-panel {
   height: 100%;
   overflow-y: auto;
-  padding: 1rem;
+  padding: 0 1rem 1rem 1rem;
   display: flex;
   flex-direction: column;
+  box-sizing: border-box;
 }
 
 /* 提示词部分样式 - 添加边框和圆角 */
@@ -691,7 +692,7 @@ defineExpose({
   margin-bottom: 1rem;
   border: 1px solid #e4e7ed;
   border-radius: 8px;
-  overflow: hidden;
+  /* overflow: hidden; */
 }
 
 .model-section,
@@ -809,20 +810,55 @@ defineExpose({
   padding: 10px;
 }
 
+/* 提示词输入框包装器 */
+.prompt-input-wrapper {
+  padding: 16px;
+  overflow: visible;
+}
+
 /* 提示词输入框区域内边距 */
 .prompt-section .el-input {
-  margin: 16px;
-  width: calc(100% - 32px);
+  width: 100%;
 }
 
 .prompt-section .el-input .el-textarea__inner {
   border: 1px solid #dcdfe6;
   border-radius: 6px;
   transition: border-color 0.3s;
+  resize: none; /* 禁用拖动调整大小 */
+  overflow-y: auto;
+  word-wrap: break-word;
+  word-break: break-all;
+  /* 移除最大高度限制，因为不再需要拖动功能 */
+  box-sizing: border-box;
 }
 
 .prompt-section .el-input .el-textarea__inner:focus {
   border-color: #409eff;
+}
+
+/* 确保提示词输入框在所有浏览器中都能正常滚动 */
+.prompt-textarea .el-textarea__inner {
+  scrollbar-width: thin;
+  scrollbar-color: #c1c1c1 #f1f1f1;
+}
+
+.prompt-textarea .el-textarea__inner::-webkit-scrollbar {
+  width: 8px;
+}
+
+.prompt-textarea .el-textarea__inner::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.prompt-textarea .el-textarea__inner::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+.prompt-textarea .el-textarea__inner::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
 }
 
 /* 知识库模块样式 */
@@ -935,4 +971,10 @@ defineExpose({
   justify-content: flex-end;
   gap: 8px;
 }
+
+/* 强制设置textarea内部元素高度 */
+/* :deep(.el-textarea__inner) {
+  min-height: 400px !important;
+  max-height: 1200px !important;
+} */
 </style>
