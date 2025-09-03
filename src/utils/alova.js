@@ -32,6 +32,10 @@ const alovaInstance = createAlova({
       if (response.status === 404) {
         return {}
       }
+      // 如果有自定义的 transform 函数，直接返回 response，让 transform 处理
+      if (method.config.transform) {
+        return response
+      }
       // 处理成功响应
       return response.json()
     },

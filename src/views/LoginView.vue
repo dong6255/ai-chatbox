@@ -49,6 +49,7 @@
 import { ref, reactive, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import { useAuthStore } from '@/stores/auth'
 import pnxclient from '@/utils/pnxclient'
 import { getRandom, returnSignResult } from '@/api/auth'
 import msComm from "@/utils/ms_comm.js";

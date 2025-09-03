@@ -419,7 +419,11 @@ onMounted(() => {
 let clickCount = 0
 let clickTimer = null
 
-const handleClickTopLeft = () => {
+/**
+ * 处理左上角点击事件
+ * 连续四次点击会跳转到登录页面，如果已登录则先退出登录
+ */
+const handleClickTopLeft = async () => {
   clickCount++
   console.log(`点击次数: ${clickCount}`)
   
@@ -431,6 +435,14 @@ const handleClickTopLeft = () => {
   // 如果达到四次点击，跳转到登录页面
   if (clickCount >= 4) {
     console.log('连续四次点击，跳转到登录页面')
+    
+    // 如果已登录，先退出登录
+    if (authStore.isLoggedIn) {
+      console.log('用户已登录，先执行退出登录')
+      await authStore.logout()
+    }
+    
+    // 跳转到登录页面
     router.push('/login')
     clickCount = 0
     return
